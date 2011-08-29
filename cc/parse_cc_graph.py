@@ -67,7 +67,7 @@
 
 # printGraph(g): print out a graph
 
-# pringAttribs(ga): print out graph attributes
+# printAttribs(ga): print out graph attributes
 
 
 import sys
@@ -287,4 +287,4 @@ if False:
   printAttribs(x[1])
   printResults(x[2])
 
-  Assert (x[0] == reverseMultigraph(reverseMultigraph(x[0])))
+  assert (x[0] == reverseMultigraph(reverseMultigraph(x[0])))

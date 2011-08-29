@@ -88,7 +88,7 @@ args = parser.parse_args()
 
 # print a node description
 def print_node (ga, x):
-  sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels[x]))
+  sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
 
 # print an edge description
 def print_edge (ga, x, y):
@@ -97,21 +97,18 @@ def print_edge (ga, x, y):
       l = l[0]
     sys.stdout.write(l)
 
-  sys.stdout.write('--')
+  sys.stdout.write('--[')
   lbls = ga.edgeLabels.get(x, {}).get(y, [])
   if len(lbls) != 0:
-    sys.stdout.write('[')
     print_edge_label(lbls[0])
     for l in lbls[1:]:
       sys.stdout.write(', ')
       print_edge_label(l)
-    sys.stdout.write(']')
-
-  sys.stdout.write('->')
+  sys.stdout.write(']->')
 
 
 # explain why a root is a root
-def explain_root (revg, ga, roots, root):
+def explain_root (revg, ga, num_known, roots, root):
   print '    Root', root,
 
   if roots[root] == 'gcRoot':
@@ -122,8 +119,9 @@ def explain_root (revg, ga, roots, root):
     return
 
   assert(roots[root] == 'rcRoot')
-  print 'is a ref counted object.'
-
+  print 'is a ref counted object with', ga.rcNodes[root] - num_known[root], \
+      'unknown edge(s).'
+  
   if root in revg:
     print '    known edges:'
     for e in revg[root]:
@@ -133,9 +131,8 @@ def explain_root (revg, ga, roots, root):
       print_edge(ga, e, root)
       sys.stdout.write (' {0}\n'.format(root))
 
-
 # print out the path to an object that has been discovered
-def print_path (revg, ga, roots, x, path):
+def print_path (revg, ga, num_known, roots, x, path):
   for p in path:
     print_node(ga, p[0])
     sys.stdout.write('\n    ')
@@ -145,14 +142,14 @@ def print_path (revg, ga, roots, x, path):
   print
   print
   if path == []:
-    explain_root(revg, ga, roots, x)
+    explain_root(revg, ga, num_known, roots, x)
   else:
-    explain_root(revg, ga, roots, path[0][0])
+    explain_root(revg, ga, num_known, roots, path[0][0])
   print
 
 
 # look for roots and print out the paths to the given object
-def findRoots (revg, ga, roots, x):
+def findRoots (revg, ga, num_known, roots, x):
   visited = set([])
   path = []
   anyFound = [False]
@@ -163,7 +160,7 @@ def findRoots (revg, ga, roots, x):
     visited.add(y)
     if y in roots:
       path.reverse()
-      print_path(revg, ga, roots, x, path)
+      print_path(revg, ga, num_known, roots, x, path)
       path.reverse()
       anyFound[0] = True
     else:
@@ -234,7 +231,7 @@ revg = reverseGraph(g)
 if args.target[0:2] == '0x':
   targs = [args.target]
 else:
-  # look for objects with a class name prefixes, not a particular object
+  # look for objects with a class name prefix, not a particular object
   targs = []
   for x in g.keys():
     if ga.nodeLabels.get(x, '')[0:len(args.target)] == args.target:
@@ -244,7 +241,7 @@ else:
 
 for a in targs:
   if a in g:
-    findRoots(revg, ga, roots, a)
+    findRoots(revg, ga, res[0], roots, a)
   else:
     sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
