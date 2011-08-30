@@ -36,19 +36,45 @@
 #
 # ***** END LICENSE BLOCK *****
 
+
 import sys
+from optparse import OptionParser
 from collections import namedtuple
 import parse_cc_graph
 
 # CCC: Cycle collector checker.
-
-
+#
 # Implementation of the cycle collector algorithm in Python, along
-# with checker to compare the results to those reported by Fx.
+# comparison of those results to those reported by Fx.  There are also
+# a few basic well-formedness checks that are done.
 #
 # Same basic idea as Bacon-Rajan 01, but implemented slightly
-# differently, as we just examine the entire CC heap.
+# differently, as we examine the entire CC heap:
+#
+#   - Compute the number of edges in the graph pointing to each node
+#     (the 'internal counts').
+#
+#   - Compute the set of ref-counted roots, which are ref-counted
+#     objects where the ref count is greater than the internal count.
+#
+#   - Compute live set of objects reachable from marked GC objects or
+#     ref-counted roots.
+#
+#   - Convert output to the same format as the FX CC.  Any objects in
+#     the set of live objects are garbage.
 
+
+# Arguments: one or more cycle collector edge files, which will be checked in sequence.
+
+usage = "usage: %prog FILE1 FILE2 ... FILEn\n\
+  Each FILE is a cycle collector graph file to check."
+description = 'Check one or more cycle collector result files for correctness relative to the cycle collector graph.'
+parser = OptionParser(description=description, usage=usage)
+
+options, args = parser.parse_args()
+
+
+# Calculate how many references are accounted for by edges in the graph.
 def computeInternalCounts (g, ga):
   ics = {}
   
@@ -58,6 +84,7 @@ def computeInternalCounts (g, ga):
         ics[dst] = ics.get(dst, 0) + count
 
   return ics
+
 
 # A refcounted node is a root if its ref count > its computed internal count.
 def computeRefCountedRoots (ga, ics):
@@ -97,6 +124,7 @@ def reachableFromRoots (g, ga, rcRoots):
   return live
 
 
+# perform cycle collection on the graph
 def cycleCollect (g, ga):
   # compute results
   ics = computeInternalCounts(g, ga)
@@ -121,14 +149,21 @@ def graphRange (g):
 
 # some basic coherence checks on the graph
 def checkGraph (g, ga):
-  rcs = set(ga.rcNodes.keys())
-  gcs = set(ga.gcNodes.keys())
-  # no nodes are both RC and GC
-  assert(rcs & gcs == set([]))
+  rcs = set(ga.rcNodes.keys())  # RCed nodes
+  gcs = set(ga.gcNodes.keys())  # GCed nodes
 
-  # all ref counts are non-zero positive integers
+  # no nodes can be both RC and GC
+  if (rcs & gcs) != set([]):
+    print 'Some nodes are both ref counted and gced:',
+    for x in rcs & gcs:
+      print x
+    exit(-1)
+
+  # all ref counts must be non-zero positive integers
   for v in ga.rcNodes.values():
-    assert (v > 0)
+    if v <= 0:
+      print 'Found a negative or zero ref count.'
+      exit(-1)
 
   # all GC nodes map to either True or False
   assert(set(ga.gcNodes.values()) - set([True, False]) == set([]))
@@ -142,10 +177,11 @@ def checkGraph (g, ga):
   # all nodes are either ref counted or GCed
   assert(gd == rcs | gcs)
 
-  # I don't bother checking anything related to labels here
+  # Nothing related to labels is checked.
   
 
-def checkResults (g, ga, (knownEdgesFx, garbageFx), (knownEdgesPy, garbagePy)):
+def checkResults (g, ga, (knownEdgesFx, garbageFx), r1Name,
+                         (knownEdgesPy, garbagePy), r2Name):
   resultsOk = True
 
   # check that calculated garbage is identical
@@ -154,11 +190,11 @@ def checkResults (g, ga, (knownEdgesFx, garbageFx), (knownEdgesPy, garbagePy)):
     resultsOk = False
     s1 = garbageFx - garbagePy
     for x in s1:
-      print '  Error:', x, 'was reported as garbage by the Fx CC, but not the Python CC.'
+      print '  Error:', x, 'was reported as garbage by ' + r1Name + ' but not ' + r2Name
       foundAnyBad = True
     s2 = garbagePy - garbageFx
     for x in s2:
-      print '  Error:', x, 'was reported as garbage by the Python CC, but not the Fx CC.'
+      print '  Error:', x, 'was reported as garbage by ' + r1Name + ' but not ' + r2Name
       foundAnyBad = True
     assert(s1 != set([]) or s2 != set([]))
 
@@ -170,16 +206,17 @@ def checkResults (g, ga, (knownEdgesFx, garbageFx), (knownEdgesPy, garbagePy)):
     for x in g.keys():
       if x in knownEdgesFx:
         if not x in knownEdgesPy:
-          print '  Error:', x, 'had known edges reported, but Python did not think it was a root.'
+          print '  Error:', x, 'had known edges reported, but ' + r2Name + ' did not think it was a root.'
         else:
           if knownEdgesFx[x] != knownEdgesPy[x]:
-            sys.stdout.write ('  Error: Fx and Python disagree on internal count for {0} (computed {1}, reported {2})\n'.format\
+            sys.stdout.write ('  Error: results disagree on internal count for {0} (computed {1}, reported {2})\n'.format\
                                 (x, knownEdgesPy[x], knownEdgesFx[x]))            
       else:
         if x in knownEdgesPy:
-          print '  Error:', x, 'in computed root set, but not Fx-reported root set.'
+          print '  Error:', x, 'in ' + r2Name + ' root set, but not ' + r1Name + ' root set.'
 
   return resultsOk
+
 
 
 def parseAndCheckResults(fname):
@@ -202,7 +239,8 @@ def parseAndCheckResults(fname):
 
   print 'Comparing results.',
   sys.stdout.flush()
-  ok = checkResults (g, ga, resFx, resPy)
+  ok = checkResults (g, ga, resFx, 'Firefox cycle collector', 
+                            resPy, 'Python cycle collector')
   if ok:
     print 'Ok.'
   else:
@@ -214,13 +252,9 @@ def parseAndCheckResults(fname):
 
 ####################
 
-if len(sys.argv) < 2:
-  print 'Not enough arguments.'
-  exit()
-
 
 allOk = True
-for fname in sys.argv[1:]:
+for fname in args:
   allOk &= parseAndCheckResults(fname)
 
 if allOk:

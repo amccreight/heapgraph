@@ -67,8 +67,6 @@ usage = "usage: %prog [options] file_name target\n\
   target can be an address or a prefix of a object name"
 parser = OptionParser(usage=usage)
 
-#parser = argparse.ArgumentParser(description='Find a rooting object in the cycle collector graph.')
-
 parser.add_option("-i", '--ignore-rc-roots', dest='ignore_rc_roots', action='store_true',
                   default=False,
                   help='ignore ref counted roots')
