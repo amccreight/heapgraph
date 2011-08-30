@@ -39,7 +39,7 @@
 import sys
 from collections import namedtuple
 import parse_cc_graph
-import argparse
+from optparse import OptionParser
 
 
 # Find the objects that are rooting a particular object (or objects of
@@ -61,28 +61,58 @@ import argparse
 
 # Command line arguments
 
-parser = argparse.ArgumentParser(description='Find a rooting object in the cycle collector graph.')
+usage = "usage: %prog [options] file_name target\n\
+  file_name is the name of the cycle collector graph file\n\
+  target is the object(s) to look for\n\
+  target can be an address or a prefix of a object name"
+parser = OptionParser(usage=usage)
 
-parser.add_argument('file_name',
-                    help='cycle collector graph file name')
+#parser = argparse.ArgumentParser(description='Find a rooting object in the cycle collector graph.')
 
-parser.add_argument('target',
-                    help='address of target object or prefix of class name of targets')
+parser.add_option("-i", '--ignore-rc-roots', dest='ignore_rc_roots', action='store_true',
+                  default=False,
+                  help='ignore ref counted roots')
 
-parser.add_argument('--ignore-rc-roots', dest='ignore_rc_roots', action='store_const',
-                    const=True, default=False,
-                    help='ignore ref counted roots')
+parser.add_option("-j", '--ignore-js-roots', dest='ignore_js_roots', action='store_true',
+                  default=False,
+                  help='ignore Javascript roots')
 
-parser.add_argument('--ignore-js-roots', dest='ignore_js_roots', action='store_const',
-                    const=True, default=False,
-                    help='ignore Javascript roots')
+parser.add_option("-n", '--node-name-as-root', dest='node_roots',
+                  metavar='CLASS_NAME',
+                  help='treat nodes with this class name as extra roots')
 
-parser.add_argument('--node-name-as-root', dest='node_roots',
-                    metavar='CLASS_NAME',
-                    help='treat nodes with this class name as extra roots')
+options, args = parser.parse_args()
+
+if len(args) != 2:
+  print 'Expected two arguments.'
+  exit(0)
 
 
-args = parser.parse_args()
+
+
+# arg parse version
+#
+#parser = argparse.ArgumentParser(description='Find a rooting object in the cycle collector graph.')
+#
+#parser.add_argument('file_name',
+#                    help='cycle collector graph file name')
+#
+#parser.add_argument('target',
+#                    help='address of target object or prefix of class name of targets')
+#
+#parser.add_argument('--ignore-rc-roots', dest='ignore_rc_roots', action='store_const',
+#                    const=True, default=False,
+#                    help='ignore ref counted roots')
+#
+#parser.add_argument('--ignore-js-roots', dest='ignore_js_roots', action='store_const',
+#                    const=True, default=False,
+#                    help='ignore Javascript roots')
+#
+#parser.add_argument('--node-name-as-root', dest='node_roots',
+#                    metavar='CLASS_NAME',
+#                    help='treat nodes with this class name as extra roots')
+#
+#args = parser.parse_args()
 
 
 
@@ -158,6 +188,7 @@ def findRoots (revg, ga, num_known, roots, x):
     if y in visited:
       return False
     visited.add(y)
+
     if y in roots:
       path.reverse()
       print_path(revg, ga, num_known, roots, x, path)
@@ -212,11 +243,11 @@ def selectRoots(g, ga, res):
   roots = {}
 
   for x in g.keys():
-    if not args.ignore_rc_roots and x in res[0]:
+    if not options.ignore_rc_roots and x in res[0]:
       roots[x] = 'rcRoot'
-    elif not args.ignore_js_roots and ga.gcNodes.get(x, False):
+    elif not options.ignore_js_roots and ga.gcNodes.get(x, False):
       roots[x] = 'gcRoot'
-    elif ga.nodeLabels.get(x, '') == args.node_roots:
+    elif ga.nodeLabels.get(x, '') == options.node_roots:
       roots[x] = 'stopNodeLabel'
 
   return roots      
@@ -224,17 +255,20 @@ def selectRoots(g, ga, res):
 
 ####################
 
-(g, ga, res) = loadGraph (args.file_name)
+file_name = args[0]
+target = args[1]
+
+(g, ga, res) = loadGraph (file_name)
 roots = selectRoots(g, ga, res)
 revg = reverseGraph(g)
 
-if args.target[0:2] == '0x':
-  targs = [args.target]
+if target[0:2] == '0x':
+  targs = [target]
 else:
   # look for objects with a class name prefix, not a particular object
   targs = []
   for x in g.keys():
-    if ga.nodeLabels.get(x, '')[0:len(args.target)] == args.target:
+    if ga.nodeLabels.get(x, '')[0:len(target)] == target:
       targs.append(x)
   if targs == []:
     print 'No matching class names found.'
