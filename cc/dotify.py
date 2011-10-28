@@ -1410,8 +1410,10 @@ def print_death_stars (outf, death_stars, ga):
   for k, ds in death_stars.iteritems():
     if should_print_graph(ds[0], ga):
       print_graph(outf, ds[0], ga)
-      hd = death_star_head(ds[0])
-      outf.write('  q{0} [label="{1}"];\n'.format(hd, node_count_label_string(hd, len(ds), ga)))
+      # only add a count label if the count isn't 1
+      if len(ds) != 1:
+        hd = death_star_head(ds[0])
+        outf.write('  q{0} [label="{1}"];\n'.format(hd, node_count_label_string(hd, len(ds), ga)))
 
 #  for d in death_stars:
 #    if should_print_graph(d[1], ga):
