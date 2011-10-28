@@ -1,0 +1,43 @@
+This directory contains a number of tools for processing Firefox cycle
+collector graph logs.  This requires Firefox 9 or later, because
+Firefox 9 introduced a new cycle collector log format.
+
+See this page for how to generate these logs:
+  https://wiki.mozilla.org/Performance:Leak_Tools#Cycle_collector_heap_dump
+
+
+check_cycle_collector: Cycle collector implemented in Python.  It
+  checks its results against the result of the browser's cycle
+  collector.
+
+cycle_friends: Given a garbage object, produce a list of all members
+  of the strongly connected component involving that object,
+  considering only nodes in the graph that are garbage.
+
+dotify: CC log visualization tool.  It converts a cycle collector
+  graph dump into a .dot file that can be processed by Graphviz.  It
+  provides various forms of processing of the graph, such as merging
+  together identical structures, to make it easier to understand.
+
+find_roots: Explain why the cycle collector kept an object alive, by
+  giving a path from any rooting objects to a particular object or
+  entire class of objects.
+
+garbage_census: Give the classes of garbage objects.
+
+live_census: Give the classes of live objects in the graph, with some
+  combination of similar types (for instance, JS Objects that don't
+  have the same global are combined).
+
+node_parse_cc_graph: Simplified version of parse_cc_graph that ignores
+  edges.  This makes log parsing much faster, so it is useful if you
+  don't care about the edges.
+
+parse_cc_graph: Log parsing library.  All other scripts are built on
+  top of a log parsing library.  Takes a log file and produces a
+  multigraph, a set of graph attributes (like node and edge names),
+  and graph results.  This makes writing additional analyses very
+  easy.
+
+reverse_cc_graph: produce a reversed version of a cycle collector
+  graph.
