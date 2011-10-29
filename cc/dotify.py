@@ -1361,7 +1361,7 @@ def print_solo_graphs(outf, solo_graphs, ga):
       if should_print_graph(x[0], ga):
         print_graph(outf, x[0], ga)
         n = x[0].keys()[0]
-        outf.write('  {0} [label="{1}"];\n'.format(n, node_count_label_string(n, len(x), ga)))
+        outf.write('  q{0} [label="{1}"];\n'.format(n, node_count_label_string(n, len(x), ga)))
 
 
 # print out dot representations of two node graphs
@@ -1379,7 +1379,7 @@ def print_pair_graphs (outf, pair_graphs, ga):
           hd = l[0].keys()[1]
         le = len(l)
         if le != 1:
-          outf.write('  {0} [label="{1}"];\n'.format(hd, node_count_label_string(hd, le, ga)))
+          outf.write('  q{0} [label="{1}"];\n'.format(hd, node_count_label_string(hd, le, ga)))
 
 # print out dot representations of three node graphs
 def print_tri_graphs (outf, tri_graphs, ga):
@@ -1395,7 +1395,7 @@ def print_tri_graphs (outf, tri_graphs, ga):
           hd = set_select(c[1] - c[2])
           if hd == None:
             hd = set_select(c[1] & c[2])
-          outf.write('  {0} [label="{1}"];\n'.format(hd, node_count_label_string(hd, len(l), ga)))
+          outf.write('  q{0} [label="{1}"];\n'.format(hd, node_count_label_string(hd, len(l), ga)))
 
 
 # assume g is a death star
@@ -1622,17 +1622,18 @@ def analyze_graphs():
 
     if num_nodes < min_graph_size or not (num_nodes <= max_graph_size or max_graph_size == -1):
       continue
-    if num_nodes == 11 and analyze_death_star(x, death_stars, ga):
+    if num_nodes == 1:
+      analyze_1_graph (x, solo_graphs, ga)
+    elif num_nodes == 2 and analyze_2_graph(x, pair_graphs, ga):
+      continue
+    elif num_nodes == 3 and analyze_3_graph(x, tri_graphs, ga):
+      continue
+    elif num_nodes == 11 and analyze_death_star(x, death_stars, ga):
       continue
     else:
       other_graphs.append((num_nodes, x))
 
-    #if num_nodes == 1:
-    #  analyze_1_graph (x, solo_graphs, ga)
-    #elif num_nodes == 2 and analyze_2_graph(x, pair_graphs, ga):
-    #  continue
-    #elif num_nodes == 3 and analyze_3_graph(x, tri_graphs, ga):
-    #  continue
+
 
 
 
