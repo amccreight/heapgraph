@@ -43,7 +43,7 @@ import node_parse_cc_graph
 from optparse import OptionParser
 
 
-# print out classes of garbage objects
+# print out classes of live objects
 
 # Command line arguments
 
@@ -63,13 +63,13 @@ def print_node (ga, x):
   sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
 
 
-obj_patt = re.compile ('(JS Object \([^\)]+\)) \(global=[0-9a-f]*\)')
+obj_patt = re.compile ('(JS Object \([^\)]+\)) \(global=[0-9a-fA-F]*\)')
 
 def analyze_live (nodes, ga, garb):
   nls = {}
 
   for n in nodes - garb:
-    # skipped mark nodes, on the assumption that the CC is decent about avoiding them
+    # skipped marked nodes, on the assumption that the CC is decent about avoiding them
     if n in ga.gcNodes and ga.gcNodes[n]:
       continue
 
@@ -82,7 +82,7 @@ def analyze_live (nodes, ga, garb):
   other = 0
   for l, n in nls.iteritems():
     if n > 50:
-      print '%(num)8d,%(label)s' % {'num':n, 'label':l}
+      print '%(num)8d %(label)s' % {'num':n, 'label':l}
     else:
       other += n
 
