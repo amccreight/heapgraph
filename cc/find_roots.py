@@ -260,7 +260,8 @@ target = args[1]
 roots = selectRoots(g, ga, res)
 revg = reverseGraph(g)
 
-if target[0:2] == '0x':
+# hopefully there are no class names that start with 0!
+if target[0:2] == '0':
   targs = [target]
 else:
   # look for objects with a class name prefix, not a particular object
