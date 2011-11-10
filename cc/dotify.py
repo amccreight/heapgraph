@@ -32,6 +32,8 @@ import parse_cc_graph
 ### Display options
 
 
+# I really need to make a lot of these command line options.
+
 min_graph_size = 1    # lower bound on size of subgraph to show
 max_graph_size = 1000   # upper bound on size of subgraph to show, set to -1 for no bound.
    # the first line of the .dot file will give the size of all subgraphs
@@ -51,10 +53,6 @@ SHOW_REF_COUNTS = False
 
 onlyPrintGarbage = False
   # only print out graphs containing garbage.
-
-show_purple = False
-   # Mark purple nodes purple.  A huge % of nodes are purple, so this
-   # isn't very useful.
 
 # For graphs with 1, 2 and 3 nodes, we combine some or all that are
 # displayed identically.  Set these to True to show them all.
@@ -1137,8 +1135,8 @@ def split_graph (g):
 # even as options change.
 
 def node_label_string (x, ga):
-  if node_class_labels:
-    label = ga.node_names[x]
+  if node_class_labels and x not in ga.colors:
+    label = ga.nodeLabels[x]
   elif node_address_labels:
     label = x
   else:
@@ -1426,24 +1424,9 @@ def print_death_stars (outf, death_stars, ga):
 ##################
 
 
-
-
-
-
-if show_purple:
-  ga = ga._replace(colors = purple_parse())
-  n = len(graph_nodes(g))
-  p = len(ga.colors)
-  sys.stdout.write('{0} / {1} ({2}%) purple nodes in graph\n\n'.format(p, n, 100*p/n))
-
 if False:
   print 'didn\'t add', len(no_children_parse()), 'nodes with no children.'
   assert(no_children_parse() == get_rank_0(g))
-
-if False:
-  # not really okay to remove these
-  g = remove_self(g)
-
 
 
 def merge_map_lookup (m, x):
@@ -1634,9 +1617,26 @@ def analyze_graphs():
       other_graphs.append((num_nodes, x))
 
 
+label_color = {'nsJSEventListener':'purple',
+               'nsGenericElement (xhtml) form':'green',
+               'nsGenericElement (xhtml) input':'yellow',
+               'nsGenericElement (xhtml) a':'red',
+               'nsGenericElement (xhtml) textarea':'orange',
+               'nsGenericElement (xhtml) html':'blue',
+               'nsGenericElement (xhtml) script':'blue',
+               'nsXULPrototypeNode':'pink'
+               }
 
 
+def make_colors (nodeLabels):
+  colors = {}
+  for x, lbl in nodeLabels.iteritems():
+    if lbl in label_color:
+      colors[x] = label_color[lbl]
+  return colors
 
+#
+#'nsBaseContentList'
 
 def make_draw_attribs (ga, res):
   roots = set([])
@@ -1650,7 +1650,8 @@ def make_draw_attribs (ga, res):
 
   return DrawAttribs (edgeLabels=ga.edgeLabels, nodeLabels=ga.nodeLabels,
                       rcNodes=ga.rcNodes, gcNodes=ga.gcNodes, roots=roots,
-                      garbage=res[1], colors={})
+                      garbage=res[1], colors=make_colors(ga.nodeLabels))
+#                      colors={})
 
 
 def loadGraph(fname):
@@ -1662,12 +1663,12 @@ def loadGraph(fname):
   g = parse_cc_graph.toSinglegraph(g)
   ga = make_draw_attribs (ga, res)
   print 'Done loading graph.',
-  return (g, ga)
+  return (g, ga, res)
 
 
 file_name = sys.argv[1]
 
-(g, ga) = loadGraph(file_name)
+(g, ga, res) = loadGraph(file_name)
 
 
 gg = split_graph(g)
@@ -1679,7 +1680,24 @@ analyze_graphs()
 
 # print out graphs
 
-outf = open('foo.dot', 'w')
+outf = open(file_name + '.dot', 'w')
+
+
+# print out stats at the start of a file
+
+outf.write('// ')
+for x, v in sorted(size_counts.iteritems()):
+  outf.write('{0}={1}({2}), '.format(x, v, x * v))
+outf.write('\n')
+
+# number of nodes the CC collected
+outf.write('// num nodes collected is ')
+outf.write('{0}\n'.format(len(res[1] - set(ga.gcNodes.keys()))))
+  # should we count JS nodes as garbage here?
+
+# number of JS roots
+#outf.write('// num of JS roots is {0}\n'.format(len(ga.roots & ga.black_gced)))
+
 
 
 outf.write('digraph graph_name {\n')
