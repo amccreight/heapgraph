@@ -49,15 +49,11 @@ def node_string (x, ga):
     t = 'gc.marked'
   else:
     t = 'gc'
-  if x in ga.nodeOptLabels:
-    optLbl = ' {' + ga.nodeOptLabels[x] + '}'
-  else:
-    optLbl = ''
   if x in ga.nodeLabels:
     lbl = ' ' + ga.nodeLabels[x]
   else:
     lbl = ''
-  return '{0} [{1}]{2}{3}'.format(x, t, optLbl, lbl)
+  return '{0} [{1}]{2}'.format(x, t, lbl)
 
 
 def edge_string (dst, olbl, lbl):
