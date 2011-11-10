@@ -29,9 +29,11 @@ live_census: Give the classes of live objects in the graph, with some
   combination of similar types (for instance, JS Objects that don't
   have the same global are combined).
 
-node_parse_cc_graph: Simplified version of parse_cc_graph that ignores
-  edges.  This makes log parsing much faster, so it is useful if you
-  don't care about the edges.
+reverse_cc_graph: produce a reversed version of a cycle collector
+  graph.
+
+
+Libraries:
 
 parse_cc_graph: Log parsing library.  All other scripts are built on
   top of a log parsing library.  Takes a log file and produces a
@@ -39,5 +41,12 @@ parse_cc_graph: Log parsing library.  All other scripts are built on
   and graph results.  This makes writing additional analyses very
   easy.
 
-reverse_cc_graph: produce a reversed version of a cycle collector
-  graph.
+node_parse_cc_graph: Simplified version of parse_cc_graph that ignores
+  edges.  This makes log parsing much faster, so it is useful if you
+  don't care about the edges.
+
+fast_parse_cc_graph.py: Variant of parse_cc_graph that doesn't use
+  regexps for edges.  It also doesn't record edge names.  Twice as
+  fast on some tests.  Should eventually port over some variant of
+  this to parse_cc_Graph.
+
