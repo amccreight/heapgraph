@@ -260,8 +260,8 @@ target = args[1]
 roots = selectRoots(g, ga, res)
 revg = reverseGraph(g)
 
-# hopefully there are no class names that start with 0!
-if target[0:2] == '0':
+# won't work on windows if you are searching for an address that starts with anything besides 0
+if target[0] == '0':
   targs = [target]
 else:
   # look for objects with a class name prefix, not a particular object
