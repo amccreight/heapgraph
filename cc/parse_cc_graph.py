@@ -111,23 +111,17 @@ def parseGraph (f):
       assert (not node in nodeLabels)
       nodeLabels[node] = nodeLabel
 
-  def addEdge (source, target, edgeLabel):
-    def addEdgeLabel (lbl):
-      # this line is about 1/4 of the running time of the parser
-      edgeLabels[source].setdefault(target, []).append(lbl)
-
-    edges[source][target] = edges[source].get(target, 0) + 1
-
-    if edgeLabel != '':
-      addEdgeLabel(edgeLabel)
-
   currNode = None
 
   for l in f:
     e = edgePatt.match(l)
     if e:
       assert(currNode != None)
-      addEdge(currNode, e.group(1), e.group(2))
+      target = e.group(1)
+      edgeLabel = e.group(2)
+      edges[currNode][target] = edges[currNode].get(target, 0) + 1
+      if edgeLabel != '':
+        edgeLabels[currNode].setdefault(target, []).append(edgeLabel)
     else:
       nm = nodePatt.match(l)
       if nm:
@@ -271,7 +265,7 @@ def printResults(r):
 
 
 
-if False:
+if True:
   # A few simple tests
 
   if len(sys.argv) < 2:
@@ -282,6 +276,8 @@ if False:
   #cProfile.run('x = parseCCEdgeFile(sys.argv[1])')
 
   x = parseCCEdgeFile(sys.argv[1])
+
+  exit(0)
 
   printGraph(x[0])
   printAttribs(x[1])
