@@ -23,14 +23,22 @@ find_roots: Explain why the cycle collector kept an object alive, by
   giving a path from any rooting objects to a particular object or
   entire class of objects.
 
+reverse_cc_graph: produce a reversed version of a cycle collector
+  graph.
+
+Large scale analysis tools:
+
 garbage_census: Give the classes of garbage objects.
 
 live_census: Give the classes of live objects in the graph, with some
   combination of similar types (for instance, JS Objects that don't
   have the same global are combined).
 
-reverse_cc_graph: produce a reversed version of a cycle collector
-  graph.
+parental: Get the classes that are holding onto elements of a
+  particular class.
+
+edge_counter: Get the number of fields in objects of a particular
+  class.
 
 
 Libraries:
