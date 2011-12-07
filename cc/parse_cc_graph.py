@@ -83,9 +83,8 @@ GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels rcNodes gcNodes
 ####  Log parsing
 ####
 
-nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
-edgePatt = re.compile ('> ([a-zA-Z0-9]+) (.*)$')
-
+nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r]*)\r?$')
+edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r]*)\r?$')
 
 # parse CC graph
 def parseGraph (f):
@@ -114,11 +113,19 @@ def parseGraph (f):
   currNode = None
 
   for l in f:
-    e = edgePatt.match(l)
-    if e:
+#    e = edgePatt.match(l)
+#    if e:
+    if l[0] == '>':
+      e = edgePatt.match(l)
       assert(currNode != None)
       target = e.group(1)
       edgeLabel = e.group(2)
+
+#    if l[0] == '>':
+#      edge_addr_end = l.index(' ', 2)
+#      target = l[2:edge_addr_end]
+#      edgeLabel = l[edge_addr_end+1:]
+
       edges[currNode][target] = edges[currNode].get(target, 0) + 1
       if edgeLabel != '':
         edgeLabels[currNode].setdefault(target, []).append(edgeLabel)
@@ -137,7 +144,7 @@ def parseGraph (f):
           isRefCounted = True
           nodeInfo = int(nodeTy[3:])
         addNode(currNode, isRefCounted, nodeInfo, nm.group(3))
-      elif l == '==========\n':
+      elif l[:10] == '==========':
         break
       else:
         print 'Error: Unknown line:', l[:-1]
@@ -147,7 +154,7 @@ def parseGraph (f):
   return (edges, ga)
 
 
-resultPatt = re.compile ('([a-zA-Z0-9]+) \[([a-z0-9=]+)\]$')
+resultPatt = re.compile ('([a-zA-Z0-9]+) \[([a-z0-9=]+)\]\w*')
 knownPatt = re.compile ('known=(\d+)')
 
 
@@ -170,10 +177,8 @@ def parseResults (f):
           knownEdges[obj] = int(km.group(1))
         else:
           print 'Error: Unknown result entry type:', tag
-          break
     else:
       print 'Error: Unknown result entry:', l[:-1]
-      break
 
   return (knownEdges, garbage)
 
@@ -265,7 +270,7 @@ def printResults(r):
 
 
 
-if True:
+if False:
   # A few simple tests
 
   if len(sys.argv) < 2:
