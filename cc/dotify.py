@@ -4,6 +4,8 @@ import sys
 import re
 from collections import namedtuple
 import parse_cc_graph
+from optparse import OptionParser
+
 
 
 # Parse graph data into a data structure, process it, produce a .dot file.
@@ -21,29 +23,62 @@ import parse_cc_graph
 # If you trim down to a couple of subgraphs, you can sometimes use twopi or 
 # dot instead of sfdp.
 
+# These options improve the graph:
+#     sfdp -Gsize=67! -Goverlap=prism -Tpdf 
+
 # Circles are refcounted DOM nodes, squares are GCed JS nodes,
 # triangles are objects the CC has identified as garbage.
 
-
-# This does not preserve duplicate edges.
 
 
 
 ### Display options
 
 
+usage = "usage: %prog [options] file_name\n\
+  file_name is the name of the cycle collector graph file"
+parser = OptionParser(usage=usage)
+
+parser.add_option('--min',
+                  action='store', dest='min_graph_size', type='int',
+                  default=0,
+                  help='minimum size of subgraph to display')
+
+parser.add_option('--max',
+                  action='store', dest='max_graph_size', type='int',
+                  default=-1,
+                  help='maximum size of subgraph to display')
+
+parser.add_option('--show-labels',
+                  action='store_true', dest='node_class_labels',
+                  help='show labels of nodes')
+
+parser.add_option('--show-edge-labels',
+                  action='store_true', dest='edge_labels',
+                  help='show labels of nodes')
+
+parser.add_option('--show-addresses',
+                  action='store_true', dest='node_address_labels',
+                  help='show addresses of nodes')
+
+parser.add_option('--html-labels',
+                  action='store_true', dest='html_labels',
+                  help='show tag labels for nsGenericElement (xhtml) nodes')
+
+options, args = parser.parse_args()
+
+
+if len(sys.argv) < 2:
+  print 'Not enough arguments.'
+  exit()
+
+
+
+
 # I really need to make a lot of these command line options.
 
-min_graph_size = 1    # lower bound on size of subgraph to show
-max_graph_size = 1000   # upper bound on size of subgraph to show, set to -1 for no bound.
-   # the first line of the .dot file will give the size of all subgraphs
-   # the format is size = number at this size (total num of nodes)
-
-node_class_labels = False   # print the class of a node on the graph
-node_address_labels = False   # print out the address of a node in the graph
 precise_node_name = False    # use a more complete class name
        # eg "nsNodeInfo (xhtml) span" instead of "nsNodeInfo"
-print_edge_labels = False  # print the name of the edge on the graph
 
 show_roots = True   # shade graph roots
 
@@ -69,55 +104,24 @@ REMOVE_ACYCLIC = False    # remove acyclic nodes.  if False, then just highlight
 #ACYCLIC_DEPTH = 3         # one of the acyclic algorithms only works to a fixed depth
 
 # This gets rid of a lot of boring parts of the graph, so it can be handy for browsing.
-CALC_DUPS = False       # find JS nodes that duplicate other nodes (eg have same parents and children)
+CALC_DUPS = True       # find JS nodes that duplicate other nodes (eg have same parents and children)
 REMOVE_DUPS = False     # remove duplicates.  If False, highlight them on the graph.
-
-
-refCount = False
-  # Before anything else, perform refcounting to eliminate objects not reachable
-  # from cycles.  Can produce odd looking results.
-
-
-ANALYZE_LEAKS = False
 
 
 ####################
 
 
 
-if len(sys.argv) < 2:
-  print 'Not enough arguments.'
-  exit()
 
-# whichCC = sys.argv[1]
 
 
 
 DrawAttribs = namedtuple('DrawAttribs', 'edgeLabels nodeLabels rcNodes gcNodes roots garbage colors')
 
 
-
-
-
-#  ga = GraphAttribs (roots=roots,
-#                     black_rced=black_rced, black_gced=black_gced,
-#                     edge_names=edge_names, node_names=node_names,
-#                     colors={}, shadies=set([]),
-#                     ref_counts=ref_counts)
-
-
-
 ####
 #### Graph analysis
 ####
-
-
-# remove self-edges (disabled currently)
-def remove_self (g):
-  newg = {}
-  for src, edges in g.iteritems():
-    newg[src] = edges - set([src])
-  return newg
 
 
 # compute set of source and target nodes
@@ -225,34 +229,6 @@ def remove_nodes (g, s):
       ng[src] = edges - s
   return ng
 
-def computeRefCounts (g):
-  counts = {}
-  for src, edges in g.iteritems():
-    counts[src] = counts.pop(src, 0)  # init the counts
-    for e in edges:
-      counts[e] = counts.pop(e, 0) + 1
-  return counts
-
-
-# ref counting to eliminate nodes not reachable from loops
-def refCountGraph (g, ga):
-  counts = computeRefCounts(g)
-
-  worklist = []
-  for n, k in counts.iteritems():
-    if k == 0:
-      worklist.append(n)
-
-  while worklist != []:
-    n = worklist.pop()
-    if n in g:
-      for e in g[n]:
-        if e in counts:
-          counts[e] -= 1
-          if counts[e] <= 0:
-            worklist.append(e)
-      del g[n]
-  
 
 # return an arbitrary set element
 def set_select (s):
@@ -1128,16 +1104,21 @@ def split_graph (g):
   return gg.values()
 
 
-
 # node_format_string computes the string used to describe a node: By
 # using this string as a key for the combining algorithms, we can
 # combine or split precisely according to how the nodes are displayed,
 # even as options change.
 
 def node_label_string (x, ga):
-  if node_class_labels and x not in ga.colors:
+  if options.html_labels:
+    l = ga.nodeLabels[x]
+    if l.startswith('nsGenericElement (xhtml)'):
+      return '<' + l[25:] + '>'
+    if l.startswith('nsGenericElement (XUL)'):
+      return '<<' + l[23:] + '>>'
+  if options.node_class_labels and x not in ga.colors:
     label = ga.nodeLabels[x]
-  elif node_address_labels:
+  elif options.node_address_labels:
     label = x
   else:
     label = ''
@@ -1154,23 +1135,26 @@ def node_format_string (x, ga):
   if x in ga.roots and show_roots:
     s += 'style=filled, '
 
-  s += 'label="' + node_label_string(x, ga) + '", '
+  l = node_label_string(x, ga)
+  s += 'label="' + l + '", '
 
   # color
   if x in ga.colors:
     s += 'color=' + ga.colors[x] + ', '
 
   # shape
-  if x in ga.garbage:
-    shape = 'triangle'
-  elif x in ga.rcNodes:
-    if node_class_labels:
+  if x in ga.rcNodes:
+    if x in ga.garbage:
+      shape = 'triangle'
+    elif l != '':
       shape = 'ellipse'
     else:
       shape = 'circle'
   else:
     assert(x in ga.gcNodes)
-    if node_class_labels:
+    if x in ga.garbage:
+      shape = 'invtriangle'
+    elif options.node_class_labels:
       shape = 'box'
     else:
       shape = 'square'
@@ -1334,9 +1318,10 @@ def print_graph (outf, g, ga):
 
   for src, edges in g.iteritems():
     for dst in edges:
-      if print_edge_labels and (src, dst) in ga.edge_names:
-        # this edge_names lookup is bad
-        edge_name = 'label="{0}"'.format(ga.edge_names[(src,dst)])
+      if options.edge_labels and src in ga.edgeLabels \
+            and dst in ga.edgeLabels[src]:
+        # could be more than one, in which case we just show the first for simplicity
+        edge_name = 'label="{0}"'.format(ga.edgeLabels[src][dst][0])
       else:
         edge_name = ''
 
@@ -1559,10 +1544,6 @@ if COMPUTE_ACYCLIC:
             {"perc":(100 * v / (v + w)), "ac":v, "tot":v+w, "cl" : x}
 
 
-#if refCount:
-#  refCountGraph (g, ga)
-
-
 # don't remove acyclic nodes after this, as we must keep around the graph residue
 #tiny_mems = calc_tiny_loops (g, black_gced)
 #print 'found', len(tiny_mems), 'tiny loops nodes to remove (', 100 * len(tiny_mems) / len(graph_nodes(g)) , '% )'
@@ -1594,6 +1575,78 @@ other_graphs = []
 size_counts = {}
 
 
+
+def generic_remover (g, pred, desc):
+  nn = set([])
+  count = 0
+  
+  for x in g.keys():
+    if pred(x):
+      nn.add(x)
+      del g[x]
+      count += 1
+
+  print 'Removed', count, desc
+
+  for x in g.keys():
+    g[x] = g[x] - nn
+
+
+
+def prune_no_childs (g):
+  def no_ch_pred (x):
+    return len(g[x]) == 0
+
+  generic_remover (g, no_ch_pred, 'childless nodes.')
+
+
+def prune_js (g, ga):
+  gcn = set(ga.gcNodes.keys())
+
+  def js_pred (x):
+    return x in gcn
+
+  generic_remover (g, js_pred, 'JS nodes.')
+
+
+def prune_marked_js (g, ga):
+  s = set([])
+  for x, marked in ga.gcNodes.iteritems():
+    if marked:
+      s.add(x)
+
+  def js_pred (x):
+    return x in s
+
+  generic_remover (g, js_pred, 'JS nodes.')
+
+
+def prune_js_listener (g, ga):
+  def js_listener_pred (x):
+    return ga.nodeLabels.get(x, '') == 'nsJSEventListener'
+
+  generic_remover (g, js_listener_pred, 'JS listeners.')
+
+
+def prune_garbage (g, ga):
+  def garb_pred (x):
+    return x in ga.garbage
+
+  generic_remover (g, garb_pred, 'garbage nodes.')
+
+
+# these create a lot of noise in the graph
+def prune_info_parent_edges (g, ga):
+  count = 0
+  for x in g.keys():
+    for e in list(g[x]):
+      ename = ga.edgeLabels[x].get(e, [''])[0]
+      if ename == 'mNodeInfo' or ename == 'GetParent()':
+        g[x].remove(e)
+        count += 1
+
+  print 'Removed', count, 'nsNodeInfo and GetParent() edges.'
+
 # analyze the graphs
 
 def analyze_graphs():
@@ -1603,7 +1656,8 @@ def analyze_graphs():
     scnn = size_counts.pop(num_nodes, 0)
     size_counts[num_nodes] = scnn + 1
 
-    if num_nodes < min_graph_size or not (num_nodes <= max_graph_size or max_graph_size == -1):
+    if num_nodes < options.min_graph_size or \
+          not (num_nodes <= options.max_graph_size or options.max_graph_size == -1):
       continue
     if num_nodes == 1:
       analyze_1_graph (x, solo_graphs, ga)
@@ -1618,14 +1672,16 @@ def analyze_graphs():
 
 
 label_color = {'nsJSEventListener':'purple',
-               'nsGenericElement (xhtml) form':'green',
-               'nsGenericElement (xhtml) input':'yellow',
-               'nsGenericElement (xhtml) a':'red',
-               'nsGenericElement (xhtml) textarea':'orange',
-               'nsGenericElement (xhtml) html':'blue',
-               'nsGenericElement (xhtml) script':'blue',
-               'nsXULPrototypeNode':'pink'
-               }
+               'nsXULPrototypeNode':'pink',
+               'nsGenericDOMDataNode':'red'}
+
+#               'nsGenericElement (xhtml) form':'green',
+#               'nsGenericElement (xhtml) input':'yellow',
+#               'nsGenericElement (xhtml) a':'red',
+#               'nsGenericElement (xhtml) textarea':'orange',
+#               'nsGenericElement (xhtml) html':'blue',
+#               'nsGenericElement (xhtml) script':'blue',
+
 
 
 def make_colors (nodeLabels):
@@ -1633,10 +1689,12 @@ def make_colors (nodeLabels):
   for x, lbl in nodeLabels.iteritems():
     if lbl in label_color:
       colors[x] = label_color[lbl]
+    elif lbl.startswith('nsGenericElement (XUL)'):
+      colors[x] = 'green'
+    elif lbl.startswith('nsGenericElement (xhtml)'):
+      colors[x] = 'blue'
   return colors
 
-#
-#'nsBaseContentList'
 
 def make_draw_attribs (ga, res):
   roots = set([])
@@ -1651,7 +1709,34 @@ def make_draw_attribs (ga, res):
   return DrawAttribs (edgeLabels=ga.edgeLabels, nodeLabels=ga.nodeLabels,
                       rcNodes=ga.rcNodes, gcNodes=ga.gcNodes, roots=roots,
                       garbage=res[1], colors=make_colors(ga.nodeLabels))
-#                      colors={})
+
+
+# remove graph nodes that aren't within k steps of nodes of a given name
+def split_neighbor (g, ga, name, k):
+  visited = {}
+
+  def flood (n, l):
+    if l > k or (n in visited and visited[n] <= l):
+      return
+    visited[n] = l
+    if len(g[n]) > 10:
+      return
+    for e in g[n]:
+      flood(e, l+1)
+
+  # get objects that are close
+  for n in g:
+    if ga.nodeLabels.get(n, '') == name:
+      flood(n, 1)
+
+  visited = set(visited.keys())
+
+  # remove other objects
+  for n in g.keys():
+    if n in visited:
+      g[n] = g[n] & visited
+    else:
+      del g[n]
 
 
 def loadGraph(fname):
@@ -1662,13 +1747,24 @@ def loadGraph(fname):
   #sys.stdout.flush()
   g = parse_cc_graph.toSinglegraph(g)
   ga = make_draw_attribs (ga, res)
-  print 'Done loading graph.',
+  print 'Done loading graph.'
   return (g, ga, res)
 
 
-file_name = sys.argv[1]
+file_name = args[0]
 
 (g, ga, res) = loadGraph(file_name)
+
+
+# pre-pruning
+
+#split_neighbor(g, ga, 'nsJSEventListener', 3)
+prune_info_parent_edges(g, ga)
+#prune_garbage(g, ga)
+#prune_js(g, ga)
+#prune_marked_js(g, ga)
+#prune_js_listener(g, ga)
+#prune_no_childs(g)
 
 
 gg = split_graph(g)
@@ -1702,10 +1798,21 @@ outf.write('{0}\n'.format(len(res[1] - set(ga.gcNodes.keys()))))
 
 outf.write('digraph graph_name {\n')
 
+# don't print more than 100 of each size of other graph
+size_counts = {}
+
 for x in other_graphs:
   if should_print_graph(x[1], ga):
-    # outf.write('// {0}\n'.format(len((graph_nodes(x[1]) - black_rced) - black_gced)))
     print_graph(outf, x[1], ga)
+
+#for x in other_graphs:
+#  if x[0] != 10 and x[0] != 36:
+#    continue
+#  #if should_print_graph(x[1], ga):
+#  c = size_counts.get(x[0], 0)
+#  if c < 20:
+#    size_counts[x[0]] = c + 1
+#    print_graph(outf, x[1], ga)
 
 print_solo_graphs(outf, solo_graphs, ga)
 print_pair_graphs(outf, pair_graphs, ga)
