@@ -14,6 +14,10 @@ cycle_friends: Given a garbage object, produce a list of all members
   of the strongly connected component involving that object,
   considering only nodes in the graph that are garbage.
 
+dom_grouper: Compute the number of elements in each group of DOM,
+  print out information about what document they are associated with,
+  if any.
+
 dotify: CC log visualization tool.  It converts a cycle collector
   graph dump into a .dot file that can be processed by Graphviz.  It
   provides various forms of processing of the graph, such as merging
