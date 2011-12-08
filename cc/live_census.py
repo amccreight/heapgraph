@@ -65,6 +65,23 @@ def print_node (ga, x):
 
 obj_patt = re.compile ('(JS Object \([^\)]+\)) \(global=[0-9a-fA-F]*\)')
 
+starts_with = set (['nsGenericElement (XUL)', 'nsGenericElement (xhtml)', 'nsGenericElement (XBL)', \
+                      'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
+                      'nsXPCWrappedJS', 'JS Object (XULElement)'])
+
+
+def canonize_label(l):
+#  return l
+
+#  lm = obj_patt.match(l)
+#  if lm:
+#    return lm.group(1)
+  for s in starts_with:
+    if l.startswith(s):
+      return s
+  return l
+
+
 def analyze_live (nodes, ga, garb):
   nls = {}
 
@@ -74,14 +91,12 @@ def analyze_live (nodes, ga, garb):
       continue
 
     l = ga.nodeLabels[n]
-    lm = obj_patt.match(l)
-    if lm:
-      l = lm.group(1)
+    l = canonize_label(l)
     nls[l] = nls.get(l, 0) + 1
 
   other = 0
   for l, n in nls.iteritems():
-    if n > 50:
+    if n > 0:
       print '%(num)8d %(label)s' % {'num':n, 'label':l}
     else:
       other += n
