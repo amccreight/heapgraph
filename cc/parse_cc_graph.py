@@ -83,8 +83,8 @@ GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels rcNodes gcNodes
 ####  Log parsing
 ####
 
-nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r]*)\r?$')
-edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r]*)\r?$')
+nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?$')
+edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r\n]*)\r?$')
 
 # parse CC graph
 def parseGraph (f):
