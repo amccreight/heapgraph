@@ -37,6 +37,7 @@
 # ***** END LICENSE BLOCK *****
 
 import sys
+import re
 from collections import namedtuple
 import parse_gc_graph
 import argparse
@@ -196,11 +197,14 @@ def loadGraph(fname):
 
 ####################
 
+addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
+
+
 (g, ga) = loadGraph (args.file_name)
 roots = ga.roots
 revg = reverseGraph(g)
 
-if args.target[0:2] == '0x':
+if addrPatt.match(args.target):
   targs = [args.target]
 else:
   # look for objects with a class name prefixes, not a particular object

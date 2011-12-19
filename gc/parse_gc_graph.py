@@ -85,9 +85,9 @@ GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels roots rootLabel
 ####  Log parsing
 ####
 
-nodePatt = re.compile ('(0x[a-fA-F0-9]+) (.*)$')
-edgePatt = re.compile ('> (0x[a-fA-F0-9]+) (.*)$')
-
+nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (.*)$')
+edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (.*)$')
+sepPatt = re.compile('==========$')
 
 # A bit of a hack.  I imagine this could fail in bizarre circumstances.
 
@@ -111,11 +111,16 @@ def parseRoots (f):
       roots[addr] = blackRoot
       rootLabels[addr] = lbl
 
-    elif l == "==========\n":
+    elif sepPatt.match(l):
       break;
     else:
       print "Error: unknown line ", l
       exit(-1)
+
+  for r in rootLabels:
+    print
+    print 'abcd', r, 'efghi', rootLabels[r], 'charchar'
+    exit(0)
 
   return [roots, rootLabels]
 
