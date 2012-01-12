@@ -14,9 +14,6 @@ from optparse import OptionParser
 # which cc-edge file should be processed.  It should be invoked from
 # the directory that contains the cc-edges file and pointer_log.
 
-
-# example:   cc_grapher2.py 2  
-#    This will load cc-edges-2.log and produce cc-edges-2.dot
 # The dot file can be converted into a .pdf file with
 #    sfdp -Tpdf -O cc-edges-2.dot
 # That will produce a pdf file cc-edges-2.dot.pdf
@@ -24,7 +21,7 @@ from optparse import OptionParser
 # dot instead of sfdp.
 
 # These options improve the graph:
-#     sfdp -Gsize=67! -Goverlap=prism -Tpdf 
+#     sfdp -Gsize=67! -Goverlap=prism -Tpdf -O
 
 # Circles are refcounted DOM nodes, squares are GCed JS nodes,
 # triangles are objects the CC has identified as garbage.
@@ -64,6 +61,18 @@ parser.add_option('--show-addresses',
 parser.add_option('--html-labels',
                   action='store_true', dest='html_labels',
                   help='show tag labels for nsGenericElement (xhtml) nodes')
+
+parser.add_option('--prune-js',
+                  action='store_true', dest='prune_js',
+                  help='prune JS nodes from the graph')
+
+parser.add_option('--prune-non-js',
+                  action='store_true', dest='prune_non_js',
+                  help='prune non-JS nodes from the graph')
+
+parser.add_option('--prune-garbage',
+                  action='store_true', dest='prune_garbage',
+                  help='prune garbage nodes from the graph')
 
 options, args = parser.parse_args()
 
@@ -1609,6 +1618,15 @@ def prune_js (g, ga):
   generic_remover (g, js_pred, 'JS nodes.')
 
 
+def prune_non_js (g, ga):
+  gcn = set(ga.gcNodes.keys())
+
+  def js_pred (x):
+    return not x in gcn
+
+  generic_remover (g, js_pred, 'non-JS nodes.')
+
+
 def prune_marked_js (g, ga):
   s = set([])
   for x, marked in ga.gcNodes.iteritems():
@@ -1693,6 +1711,10 @@ def make_colors (nodeLabels):
       colors[x] = 'green'
     elif lbl.startswith('nsGenericElement (xhtml)'):
       colors[x] = 'blue'
+    elif lbl == 'nsBaseContentList':
+      colors[x] = 'orange'
+    elif lbl == 'nsContentSink':
+      colors[x] = 'magenta'
   return colors
 
 
@@ -1760,8 +1782,12 @@ file_name = args[0]
 
 #split_neighbor(g, ga, 'nsJSEventListener', 3)
 prune_info_parent_edges(g, ga)
-#prune_garbage(g, ga)
-#prune_js(g, ga)
+if options.prune_garbage:
+  prune_garbage(g, ga)
+if options.prune_js:
+  prune_js(g, ga)
+if options.prune_non_js:
+  prune_non_js (g, ga)
 #prune_marked_js(g, ga)
 #prune_js_listener(g, ga)
 #prune_no_childs(g)
