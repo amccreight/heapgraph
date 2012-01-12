@@ -71,7 +71,10 @@ if len(args) != 1:
 
 starts_with = set (['nsGenericElement (XUL)', 'nsGenericElement (xhtml)', 'nsGenericElement (XBL)', \
                       'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
-                      'nsXPCWrappedJS', 'JS Object (XULElement)'])
+                      'nsXPCWrappedJS', 'JS Object (XULElement)', \
+                      'nsDocument normal (xhtml)', \
+                      'XPCWrappedNative', 'nsJSScriptTimeoutHandler', \
+                      'nsGenericElement (SVG)',])
 
 
 def canonize_label(l):
