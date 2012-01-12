@@ -30,6 +30,9 @@ find_roots: Explain why the cycle collector kept an object alive, by
 reverse_cc_graph: produce a reversed version of a cycle collector
   graph.
 
+js_holders: analyze the classes of C++ objects that hold references to
+  JS objects.
+
 Large scale analysis tools:
 
 garbage_census: Give the classes of garbage objects.
