@@ -67,7 +67,7 @@ obj_patt = re.compile ('(JS Object \([^\)]+\)) \(global=[0-9a-fA-F]*\)')
 
 starts_with = set (['nsGenericElement (XUL)', 'nsGenericElement (xhtml)', 'nsGenericElement (XBL)', \
                       'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
-                      'nsXPCWrappedJS', 'JS Object (XULElement)'])
+                      'nsXPCWrappedJS', 'JS Object', 'nsDocument', 'XPCWrappedNative'])
 
 
 def canonize_label(l):
