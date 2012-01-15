@@ -33,6 +33,8 @@ reverse_cc_graph: produce a reversed version of a cycle collector
 js_holders: analyze the classes of C++ objects that hold references to
   JS objects.
 
+basic_loader: basic file that just loads a graph and quits.
+
 Large scale analysis tools:
 
 garbage_census: Give the classes of garbage objects.
