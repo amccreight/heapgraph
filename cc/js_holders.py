@@ -59,6 +59,11 @@ parser.add_option("-c", '--combine-labels', dest='canonize', action='store_true'
                   default=False,
                   help='When aggregating, combine similar labels, like all XUL nodes.')
 
+parser.add_option('-m', '--min',
+                  action='store', dest='min_display', type='int',
+                  default=0,
+                  help='When aggregating, only print labels with at least this many occurrences.')
+
 options, args = parser.parse_args()
 
 if len(args) != 1:
@@ -124,7 +129,8 @@ holders = find_js_holders(g, ga)
 
 if not options.individual:
   for name, count in holders.iteritems():
-    sys.stdout.write('%(num)8d %(label)s\n' % {'num':count, 'label':name})
+    if count >= options.min_display:
+      sys.stdout.write('%(num)8d %(label)s\n' % {'num':count, 'label':name})
 else:
   for addr in holders:
     print ga.nodeLabels[addr], '\t', addr
