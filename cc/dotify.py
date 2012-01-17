@@ -70,9 +70,18 @@ parser.add_option('--prune-non-js',
                   action='store_true', dest='prune_non_js',
                   help='prune non-JS nodes from the graph')
 
+parser.add_option('--prune-marked-js',
+                  action='store_true', dest='prune_marked_js',
+                  help='prune marked JS nodes from the graph')
+
 parser.add_option('--prune-garbage',
                   action='store_true', dest='prune_garbage',
                   help='prune garbage nodes from the graph')
+
+parser.add_option('--min-copies',
+                  action='store', dest='min_copies', type='int',
+                  default=0,
+                  help='only display subgraphs with at least this many copies')
 
 options, args = parser.parse_args()
 
@@ -1127,6 +1136,9 @@ def node_label_string (x, ga):
       return '<<' + l[23:] + '>>'
   if options.node_class_labels and x not in ga.colors:
     label = ga.nodeLabels[x]
+    # should spin this out into a more comprehensive label canonization
+    if label.startswith('nsDocument normal (xhtml)'):
+      label = 'nsDocument normal (xhtml)';
   elif options.node_address_labels:
     label = x
   else:
@@ -1300,12 +1312,11 @@ def analyze_death_star (g, death_stars, ga):
 def has_garbage (x, ga):
   return len((graph_nodes(x) - ga.black_rced) - ga.black_gced) != 0
 
-
-def should_print_graph (x, ga):
+def should_print_graph (x, ga, num):
   if onlyPrintGarbage:
     return has_garbage(x, ga)
   else:
-    return True
+    return num > options.min_copies
 
   # another useful predicate would be a "has shady" predicate
 
@@ -1350,7 +1361,7 @@ def print_solo_graphs(outf, solo_graphs, ga):
       for y in x:
         print_graph(outf, y, ga)
     else:
-      if should_print_graph(x[0], ga):
+      if should_print_graph(x[0], ga, len(x)):
         print_graph(outf, x[0], ga)
         n = x[0].keys()[0]
         outf.write('  q{0} [label="{1}"];\n'.format(n, node_count_label_string(n, len(x), ga)))
@@ -1359,7 +1370,7 @@ def print_solo_graphs(outf, solo_graphs, ga):
 # print out dot representations of two node graphs
 def print_pair_graphs (outf, pair_graphs, ga):
   for p, l in pair_graphs.iteritems():
-    if should_print_graph(l[0], ga):
+    if should_print_graph(l[0], ga, len(l)):
       if print_all_pairs:
         for x in l:
           print_graph(outf, x, ga)
@@ -1376,7 +1387,7 @@ def print_pair_graphs (outf, pair_graphs, ga):
 # print out dot representations of three node graphs
 def print_tri_graphs (outf, tri_graphs, ga):
   for p, l in tri_graphs.iteritems():
-    if should_print_graph(l[0], ga):
+    if should_print_graph(l[0], ga, len(l)):
       if print_all_tris:
         for x in l:
           print_graph(outf, x, ga)
@@ -1400,18 +1411,12 @@ def death_star_head (g):
 
 def print_death_stars (outf, death_stars, ga):
   for k, ds in death_stars.iteritems():
-    if should_print_graph(ds[0], ga):
+    if should_print_graph(ds[0], ga, len(ds)):
       print_graph(outf, ds[0], ga)
       # only add a count label if the count isn't 1
       if len(ds) != 1:
         hd = death_star_head(ds[0])
         outf.write('  q{0} [label="{1}"];\n'.format(hd, node_count_label_string(hd, len(ds), ga)))
-
-#  for d in death_stars:
-#    if should_print_graph(d[1], ga):
-#      print_graph(outf, d[1], ga)
-
-
 
 
 ##################
@@ -1636,7 +1641,7 @@ def prune_marked_js (g, ga):
   def js_pred (x):
     return x in s
 
-  generic_remover (g, js_pred, 'JS nodes.')
+  generic_remover (g, js_pred, 'marked JS nodes.')
 
 
 def prune_js_listener (g, ga):
@@ -1788,7 +1793,8 @@ if options.prune_js:
   prune_js(g, ga)
 if options.prune_non_js:
   prune_non_js (g, ga)
-#prune_marked_js(g, ga)
+if options.prune_marked_js:
+  prune_marked_js(g, ga)
 #prune_js_listener(g, ga)
 #prune_no_childs(g)
 
@@ -1828,7 +1834,7 @@ outf.write('digraph graph_name {\n')
 size_counts = {}
 
 for x in other_graphs:
-  if should_print_graph(x[1], ga):
+  if should_print_graph(x[1], ga, 1):
     print_graph(outf, x[1], ga)
 
 #for x in other_graphs:
