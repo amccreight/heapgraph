@@ -38,6 +38,7 @@ basic_loader: basic file that just loads a graph and quits.
 live_js_count: counts the the number of JS objects held live by
   preserved wrappers.
 
+mark_remover: remove marked objects (and results) from a CC log.
 
 Large scale analysis tools:
 
