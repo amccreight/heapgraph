@@ -98,6 +98,7 @@ def echoNonMarkedNodes (f, markedNodes):
           inMarked = False
           sys.stdout.write(l)
       elif l[:10] == '==========':
+        sys.stdout.write(l)
         break
       else:
         print 'Error: Unknown line:', l[:-1]
