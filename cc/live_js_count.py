@@ -58,6 +58,7 @@ def load_graph(fname):
 # field "Preserved wrapper".
 def live_js(g, ga):
   live = set([])
+  holders = set([])
   dummy = [""]
 
   for src, edges in g.iteritems():
@@ -70,21 +71,42 @@ def live_js(g, ga):
         if ga.edgeLabels[src].get(dst, dummy)[0] != "Preserved wrapper":
           continue
         nlbl = ga.nodeLabels[src]
-        if nlbl.startswith("nsDocument"):
-#        if nlbl.startswith("nsGenericElement"):
-#        if nlbl.startswith("nsGenericElement") or nlbl.startswith("nsDocument"):
+        if not (nlbl.startswith("nsGenericElement") or \
+                nlbl.startswith("nsDocument") or \
+                nlbl.startswith("nsGenericDOMDataNode")):
+          sys.stderr.write ("Unexpected JS holder label " + src + ": " + nlbl + "\n")
+        else:
           assert(dst in ga.gcNodes)
           assert(not ga.gcNodes[dst])
           live.add(dst)
-          continue
-#        print "Unexpected JS holder label ", src, ":", nlbl
+          holders.add(src)
 
   print "Found", len(live), "JS objects held directly by live C++."
 
-  return live
+  return (holders, live)
 
 
-def flood_from (g, ga, s):
+# even cruder than live_js: just assume that everything of a
+# particular class is live, and thus JS it holds is live.
+def class_based_live_js(g, ga):
+  live = set([])
+  holders = set([])
+  class_name = "JSContext"
+
+  for src, edges in g.iteritems():
+    if src in ga.rcNodes:
+      if ga.nodeLabels[src].startswith(class_name):
+        holders.add(src)
+        for dst, n in edges.iteritems():
+          if dst in ga.gcNodes and not ga.gcNodes[dst]:
+            live.add(dst)
+
+  print "Found", len(live), "JS objects held directly by class", class_name
+
+  return (holders, live)
+
+
+def flood_from (g, ga, holders, live):
   marked = set([])
 
   def flood_from_rec (x):
@@ -92,8 +114,10 @@ def flood_from (g, ga, s):
       if not y in marked and y in ga.gcNodes and (not ga.gcNodes[y]):
         marked.add(y)
         flood_from_rec(y)
+      if y in ga.rcNodes and not y in holders:
+        print "reached: ", ga.nodeLabels[y], "\t", y
 
-  for x in s:
+  for x in live:
     assert(x in ga.gcNodes)
     assert(not ga.gcNodes[x])
     if not x in marked:
@@ -121,8 +145,8 @@ file_name = sys.argv[1]
 
 (g, ga) = load_graph (file_name)
 
-live = live_js(g, ga)
+(holders, live) = live_js(g, ga)
 
-livejs = flood_from(g, ga, live)
+livejs = flood_from(g, ga, holders, live)
 
 unlive(g, ga, livejs)
