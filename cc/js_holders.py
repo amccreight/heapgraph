@@ -78,6 +78,7 @@ starts_with = set (['nsGenericElement (XUL)', 'nsGenericElement (xhtml)', 'nsGen
                       'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
                       'nsXPCWrappedJS', 'JS Object (XULElement)', \
                       'nsDocument normal (xhtml)', \
+                      'nsDocument (xhtml)', \
                       'XPCWrappedNative', 'nsJSScriptTimeoutHandler', \
                       'nsGenericElement (SVG)',])
 
