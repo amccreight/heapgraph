@@ -78,10 +78,18 @@ parser.add_option('--prune-garbage',
                   action='store_true', dest='prune_garbage',
                   help='prune garbage nodes from the graph')
 
+parser.add_option('--no-info-parent-prune',
+                  action='store_true', dest='no_info_parent_prune',
+                  help='don\'t prune nsNodeInfo and GetParent() edges from the graph')
+
 parser.add_option('--min-copies',
                   action='store', dest='min_copies', type='int',
                   default=0,
                   help='only display subgraphs with at least this many copies')
+
+parser.add_option('--merge-js',
+                  action='store_true', dest='merge_js',
+                  help='merge JS in strongly connected components')
 
 options, args = parser.parse_args()
 
@@ -127,11 +135,6 @@ REMOVE_DUPS = False     # remove duplicates.  If False, highlight them on the gr
 
 
 ####################
-
-
-
-
-
 
 
 DrawAttribs = namedtuple('DrawAttribs', 'edgeLabels nodeLabels rcNodes gcNodes roots garbage colors')
@@ -482,28 +485,9 @@ def paths_to (g, leak):
 
   return remove_nodes(g, graph_nodes(g) - parents)
   
-
-
-
-# union-find with path compression
-
-def findOld (m, x):
-  if not x in m:
-    m[x] = x
-    return x
-  if m[x] == x:
-    return x
-  z = findOld (m, m[x])
-  m[x] = z
-  return z
-
-def unionOld (m, x, y):
-  xp = findOld (m, x)
-  yp = findOld (m, y)
-  m[xp] = yp
-
-
-# union find with path compression and union by rank
+####
+#### Union-find with path compression and union by rank
+####
 
 def findi (m, x):
   if not x in m:
@@ -532,21 +516,119 @@ def union (m, x, y):
     m[xp[0]][1] += 1
 
 
+
+
+####
+#### Strongly connected component merging
+####
+
+
+# okay to merge non-marked JS nodes.
 def ok_js_merge (ga, x):
-  return x in ga.black_gced and not x in ga.roots
+  return x in ga.gcNodes
 
-# if two non-root JS nodes point to each other, we can merge them safely.
-# this will clear out a huge amount of JS tree mess, thanks to the parent pointer.
-# once the parent pointer is gone, maybe acyclic stuff can clear some of it out.
-def calc_js_mini_loop (g, ga):
-  m = {}
 
-  for n, edges in g.iteritems():
+    # only merge if both are GCed
+def merge_map_lookup (m, x):
+  if x in m and x in ga.gcNodes and m[x] in ga.gcNodes:
+    return m[x]
+  else:
+    return x
+
+
+def calc_loopynodes (m):
+  loopynodes = set([])
+  for x in m.keys():
+    if merge_map_lookup(m, x) != x:
+      loopynodes.add(x)
+  return loopynodes
+
+
+
+def merge_nodes (g):
+  ng = {}
+  for x, edges in g.iteritems():
+    x2 = merge_map_lookup(m, x)
+
+    # if the node being merged away is a root, make the survivor a root
+    if x in ga.roots and not x2 in ga.roots:
+      ga = ga._replace(roots = ga.roots.add(x2))
+
+    edges2 = ng.pop(x2, set([]))
+    ne = set([])
     for e in edges:
-      if e in g and n in g[e] and ok_js_merge(ga, n) and ok_js_merge(ga, e):
-        union(m, n, e)
+      ne.add(merge_map_lookup(m, e))
 
-  return m
+    ng[x2] = ne | edges2
+
+  return ng
+
+
+def merge_counts(m):
+  counts = {}
+
+  for x in m:
+    y = m[x]
+    counts[y] = counts.get(y, 0) + 1
+
+  return counts
+
+  for x in counts:
+    if counts[x] > 2:
+      sys.stdout.write('%(num)8d %(label)s\n' % {'num':counts[x], 'label':x})
+
+# I think SCCs are computed as though we can pass through RC nodes,
+# but then we only merge GC nodes.
+
+def merginator(g, ga): 
+  # m = calc_js_mini_loop (g, ga)
+  m = calc_scc(g, ga)
+
+  # g2 = calc_scc_merge (g, ga)
+
+  counts = merge_counts(m)
+
+  #assert (m == calc_scc2(g, ga))
+  #check_scc_map (g, ga, m)
+
+  loopynodes = calc_loopynodes(m)
+  gn = graph_nodes(g)
+  gOrigLen = len(gn)
+  #print 'approx num JS nodes:', len(gn - ga.black_rced)
+  sys.stdout.write('EXPERIMENTAL AND WRONG: found {0} out of {1} ({2}%) nodes in SCCs.\n'.format( \
+    len(loopynodes), gOrigLen, 100 * len(loopynodes) / gOrigLen))
+
+  if False:
+    print '(marking)'
+    ga = ga._replace(shadies = loopynodes)
+  else:
+    print 'EXPERIMENTAL AND WRONG (merging nodes)'
+    ng = {}
+    for x, edges in g.iteritems():
+      x2 = merge_map_lookup(m, x)
+
+      # ideally, if node being merged away is a root, should make the
+      # survivor a root.
+
+      edges2 = ng.pop(x2, set([]))
+      ne = set([])
+      for e in edges:
+        ne.add(merge_map_lookup(m, e))
+
+      ng[x2] = ne | edges2
+
+    g = ng
+
+    gn = graph_nodes(g)
+    assert(gOrigLen - len(loopynodes) == len(gn))
+
+    return (g, counts)
+
+#    print 'approx num JS nodes:', len(gn - ga.black_rced)
+
+
+
+
 
 
 # http://en.wikipedia.org/wiki/Cheriyan%E2%80%93Mehlhorn/Gabow_algorithm
@@ -1423,88 +1505,6 @@ def print_death_stars (outf, death_stars, ga):
 ##################
 
 
-if False:
-  print 'didn\'t add', len(no_children_parse()), 'nodes with no children.'
-  assert(no_children_parse() == get_rank_0(g))
-
-
-def merge_map_lookup (m, x):
-  if x in m:
-    # only merge if both are GCed
-    if x in ga.black_gced and m[x] in ga.black_gced:
-      return m[x]
-    else:
-      return x
-  else:
-    return x
-
-
-def calc_loopynodes (m):
-  loopynodes = set([])
-  for x in m.keys():
-    if merge_map_lookup(m, x) != x:
-      loopynodes.add(x)
-  return loopynodes
-
-
-if False:
-  # m = calc_js_mini_loop (g, ga)
-  m = calc_scc (g, ga)
-  # g2 = calc_scc_merge (g, ga)
-
-  assert (m == calc_scc2(g, ga))
-  check_scc_map (g, ga, m)
-
-  loopynodes = calc_loopynodes(m)
-  gn = graph_nodes(g)
-  gOrigLen = len(gn)
-  print 'approx num JS nodes:', len(gn - ga.black_rced)
-  sys.stdout.write('found {0} out of {1} ({2}%) useless nodes in loops'.format( \
-    len(loopynodes), gOrigLen, 100 * len(loopynodes) / gOrigLen))
-
-#  m2 = calc_scc2 (g, ga)
-#  s = calc_loopynodes(m2) - loopynodes
-#
-#  for x in s:
-#    print x, x in ga.black_gced, ':',
-#    if m2[x] == x:
-#      print 'ident', ';',
-#    else:
-#      print m2[x], m2[x] in ga.black_gced, ';',
-#    if m[x] == x:
-#      print 'ident'
-#    else:
-#      print m[x], m[x] in ga.black_gced
-
-
-  if False:
-    print '(marking)'
-    ga = ga._replace(shadies = loopynodes)
-  else:
-    print '(merging)'
-    ng = {}
-    for x, edges in g.iteritems():
-      x2 = merge_map_lookup(m, x)
-
-      # if the node being merged away is a root, make the survivor a root
-      if x in ga.roots and not x2 in ga.roots:
-        ga = ga._replace(roots = ga.roots.add(x2))
-
-      edges2 = ng.pop(x2, set([]))
-      ne = set([])
-      for e in edges:
-        ne.add(merge_map_lookup(m, e))
-
-      ng[x2] = ne | edges2
-
-    g = ng
-
-    gn = graph_nodes(g)
-    assert(gOrigLen - len(loopynodes) == len(gn))
-
-    print 'approx num JS nodes:', len(gn - ga.black_rced)
-
-
 # remove JS self-loops
 if False:
   ng = {}
@@ -1670,6 +1670,7 @@ def prune_info_parent_edges (g, ga):
 
   print 'Removed', count, 'nsNodeInfo and GetParent() edges.'
 
+
 # analyze the graphs
 
 def analyze_graphs():
@@ -1688,8 +1689,9 @@ def analyze_graphs():
       continue
     elif num_nodes == 3 and analyze_3_graph(x, tri_graphs, ga):
       continue
-    elif num_nodes == 11 and analyze_death_star(x, death_stars, ga):
-      continue
+# why did merging break that?
+#    elif num_nodes == 11 and analyze_death_star(x, death_stars, ga):
+#      continue
     else:
       other_graphs.append((num_nodes, x))
 
@@ -1785,8 +1787,10 @@ file_name = args[0]
 
 # pre-pruning
 
+
 #split_neighbor(g, ga, 'nsJSEventListener', 3)
-prune_info_parent_edges(g, ga)
+if not options.no_info_parent_prune:
+  prune_info_parent_edges(g, ga)
 if options.prune_garbage:
   prune_garbage(g, ga)
 if options.prune_js:
@@ -1797,7 +1801,8 @@ if options.prune_marked_js:
   prune_marked_js(g, ga)
 #prune_js_listener(g, ga)
 #prune_no_childs(g)
-
+if options.merge_js:
+  (g, mergies) = merginator(g, ga)
 
 gg = split_graph(g)
 
@@ -1851,27 +1856,18 @@ print_pair_graphs(outf, pair_graphs, ga)
 print_tri_graphs(outf, tri_graphs, ga)
 print_death_stars(outf, death_stars, ga)
 
+if options.merge_js:
+  for x, count in mergies.iteritems():
+    if count > 10:
+      outf.write('  q{0} [label="{1}", shape=square, color=red];'.format(x, count))
+
 outf.write('}\n')
 outf.close()
 
 
-exit(0)
-
-############
 
 
 
-outf.write('// ')
-for x, v in sorted(size_counts.iteritems()):
-  outf.write('{0}={1}({2}), '.format(x, v, x * v))
-outf.write('\n')
-
-# number of nodes the CC collected
-outf.write('// num nodes collected is ')
-outf.write('{0}\n'.format(len(graph_nodes(g) - ga.black_rced - ga.black_gced)))
-
-# number of JS roots
-outf.write('// num of JS roots is {0}\n'.format(len(ga.roots & ga.black_gced)))
 
 
 
