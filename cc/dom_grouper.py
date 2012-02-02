@@ -141,17 +141,28 @@ def parseGraph (f):
       y = rep[y]
     counts[y] = counts.get(y, 0) + 1
 
+  garbage_total = 0
+  in_doc_total = 0
+  orphan_total = 0
+
   # print out information
   fout = open('counts.log', 'w')
   for x, n in counts.iteritems():
     fout.write('%(num)8d %(label)s' % {'num':n, 'label':x})
     if x in garb:
+      garbage_total += n
       fout.write(' is garbage')
     if x in docParents:
+      in_doc_total += n
       fout.write(' in %(addr)s %(label)s\n' \
                    % {'addr':docParents[x], 'label':docURLs[docParents[x]]})
     else:
+      orphan_total += n
       fout.write(' not in document\n')
+
+  sys.stderr.write('Found %(num)d nodes in orphan DOMs.\n' % {'num':orphan_total})
+  sys.stderr.write('Found %(num)d nodes in DOMs in documents.\n' % {'num':in_doc_total})
+  sys.stderr.write('Found %(num)d garbage nodes in DOMs.\n' % {'num':garbage_total})
 
   fout.close()
 
