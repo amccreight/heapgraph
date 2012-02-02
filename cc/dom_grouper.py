@@ -76,6 +76,47 @@ def union (m, rep, x, y):
     m[xp[0]][1] += 1
 
 
+def print_grouper_results (counts, rootLabels, docParents, docURLs, garb):
+  garbage_total = 0
+  in_doc_total = 0
+  orphan_total = 0
+
+  fout = open('counts.log', 'w')
+  for x, n in counts.iteritems():
+    fout.write('%(num)8d %(label)s' % {'num':n, 'label':x})
+    if x in garb:
+      garbage_total += n
+      fout.write(' is garbage')
+    if x in docParents:
+      in_doc_total += n
+      fout.write(' in document %(addr)s %(label)s\n' \
+                   % {'addr':docParents[x], 'label':docURLs[docParents[x]]})
+    else:
+      orphan_total += n
+      fout.write(' orphan from ' + rootLabels[x] + '\n')
+
+  sys.stderr.write('Found %(num)d nodes in orphan DOMs.\n' % {'num':orphan_total})
+  sys.stderr.write('Found %(num)d nodes in DOMs in documents.\n' % {'num':in_doc_total})
+  sys.stderr.write('Found %(num)d garbage nodes in DOMs.\n' % {'num':garbage_total})
+  fout.close()
+
+
+def getURL(s):
+  urlIndex = s.find("http://")
+  if urlIndex != -1:
+    return s[urlIndex:]
+  urlIndex = s.find("https://")
+  if urlIndex != -1:
+    return s[urlIndex:]
+  urlIndex = s.find("chrome://")
+  if urlIndex != -1:
+    return s[urlIndex:]
+  urlIndex = s.find("about:")
+  if urlIndex != -1:
+    return s[urlIndex:]
+  return s
+
+
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(?:rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) (.*)$')
 
@@ -83,6 +124,7 @@ def parseGraph (f):
   currNode = None
   currNodeLabel = ''
 
+  nodeLabels = {}
   docsChildren = {}
   docURLs = {}
   doneCurrEdges = False
@@ -113,7 +155,9 @@ def parseGraph (f):
         isDoc = currNodeLabel.startswith('nsDocument')
         if isDoc:
           docsChildren[currNode] = set([])
-          docURLs[currNode] = currNodeLabel[11:]
+          docURLs[currNode] = getURL(currNodeLabel)
+        else:
+          nodeLabels[currNode] = currNodeLabel
         doneCurrEdges = False
       elif l == '==========\n':
         break
@@ -131,43 +175,30 @@ def parseGraph (f):
       docParents[y] = x
 
 
-  # compute size of each DOM chunk
-
+  # compute DOM trees.
   counts = {}
+  rootLabels = {}
 
   for x in m:
     y = find(m, x)
     if y in rep:
       y = rep[y]
     counts[y] = counts.get(y, 0) + 1
-
-  garbage_total = 0
-  in_doc_total = 0
-  orphan_total = 0
-
-  # print out information
-  fout = open('counts.log', 'w')
-  for x, n in counts.iteritems():
-    fout.write('%(num)8d %(label)s' % {'num':n, 'label':x})
-    if x in garb:
-      garbage_total += n
-      fout.write(' is garbage')
-    if x in docParents:
-      in_doc_total += n
-      fout.write(' in %(addr)s %(label)s\n' \
-                   % {'addr':docParents[x], 'label':docURLs[docParents[x]]})
-    else:
-      orphan_total += n
-      fout.write(' not in document\n')
-
-  sys.stderr.write('Found %(num)d nodes in orphan DOMs.\n' % {'num':orphan_total})
-  sys.stderr.write('Found %(num)d nodes in DOMs in documents.\n' % {'num':in_doc_total})
-  sys.stderr.write('Found %(num)d garbage nodes in DOMs.\n' % {'num':garbage_total})
-
-  fout.close()
+    if y not in rootLabels:
+      currLabel = nodeLabels[y]
+      if currLabel.startswith("nsGenericElement (xhtml)"):
+        currLabel = getURL(currLabel)
+      elif currLabel.startswith("nsGenericElement (XUL)"):
+        currLabel = getURL(currLabel)
+      rootLabels[y] = currLabel
 
 
-def parseCCEdgeFile (fname):
+  # print out results
+  print_grouper_results(counts, rootLabels, docParents, docURLs, garb)
+
+
+
+def parseFile (fname):
   try:
     f = open(fname, 'r')
   except:
@@ -182,4 +213,4 @@ if len(sys.argv) < 2:
   print 'Not enough arguments.'
   exit()
 
-parseCCEdgeFile(sys.argv[1])
+parseFile(sys.argv[1])
