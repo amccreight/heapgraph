@@ -177,6 +177,7 @@ def parseGraph (f):
 
   # compute DOM trees.
   counts = {}
+  trees = {}
   rootLabels = {}
 
   for x in m:
@@ -184,6 +185,9 @@ def parseGraph (f):
     if y in rep:
       y = rep[y]
     counts[y] = counts.get(y, 0) + 1
+    if not y in trees:
+      trees[y] = []
+    trees[y].append(x)
     if y not in rootLabels:
       currLabel = nodeLabels[y]
       if currLabel.startswith("nsGenericElement (xhtml)"):
@@ -192,10 +196,113 @@ def parseGraph (f):
         currLabel = getURL(currLabel)
       rootLabels[y] = currLabel
 
-
   # print out results
   print_grouper_results(counts, rootLabels, docParents, docURLs, garb)
 
+  # print out merging information
+  if True:
+    for x, l in trees.iteritems():
+      print x,
+      for y in l:
+        print y,
+      print
+
+  return trees
+
+
+def mergeDOMParents (f, trees):
+  sys.stderr.write('Merging DOM parents.\n')
+
+  # compute direct DOM merge map
+  merge = {}
+  for x, l in trees.iteritems():
+    for y in l:
+      merge[y] = x
+
+  currNode = None
+
+  parentsOfDOM = {} # map from a DOM to types of DOM parents to a list of parent nodes pointing at that DOM
+  inParent = False
+  parentClass = None
+  childField = None
+
+  possibleChildren = set([])
+  childrenOfDOM = {}
+
+  # compute DOM parents to merge
+  for l in f:
+    if l[0] == '>':
+      e = edgePatt.match(l)
+      assert(e != None)
+      target = e.group(1)
+      edgeLabel = e.group(2)
+      if inParent:
+        assert(currNode != None)
+        assert(childField != None)
+        if edgeLabel != childField:
+          continue
+        domChild = merge.get(target, target)
+        if not domChild in parentsOfDOM:
+          parentsOfDOM[domChild] = {}
+        if not parentClass in parentsOfDOM[domChild]:
+          parentsOfDOM[domChild][parentClass] = []
+        parentsOfDOM[domChild][parentClass].append(currNode)
+        inParent = False
+      elif edgeLabel == '[via hash] mListenerManager':
+        assert(currNode != None)
+        domParent = merge.get(currNode, currNode)
+        # will have to do something else if we generalize this
+        if not domParent in childrenOfDOM:
+          childrenOfDOM[domParent] = []
+        childrenOfDOM[domParent].append(target)
+    else:
+      nm = nodePatt.match(l)
+      if nm:
+        currNode = nm.group(1)
+        currNodeLabel = nm.group(2)
+        if currNodeLabel == 'nsDOMCSSAttributeDeclaration':
+          inParent = True
+          parentClass = 'nsDOMCSSAttributeDeclaration'
+          childField = 'mElement'
+          continue
+        if currNodeLabel.startswith('XPCWrappedNative'):
+          inParent = True
+          parentClass = 'XPCWrappedNative'
+          childField = 'mIdentity'
+          continue
+        inParent = False
+        if currNodeLabel == 'nsEventListenerManager':
+          possibleChildren.add(currNode)
+
+      elif l.startswith('=========='):
+        break
+      else:
+        print 'Error: Unknown line:', l[:-1]
+
+  # print out parent merging information
+  for m in parentsOfDOM.values():
+    for l in m.values():
+      print l[0],
+      for y in l:
+        print y,
+      print
+
+  # print out child
+  elmCounts = 0
+  for x, l in childrenOfDOM.iteritems():
+    foundAny = False
+    assert(len(l) != 0)
+    if len(l) == 1:
+      continue
+    for y in l:
+      if y in possibleChildren:
+        foundAny = True
+        elmCounts += 1
+        print y,
+        #sys.stderr.write(y + ' ')
+    if foundAny:
+      print
+      #sys.stderr.write('\n')
 
 
 def parseFile (fname):
@@ -205,7 +312,11 @@ def parseFile (fname):
     print 'Error opening file', fname
     exit(-1)
 
-  pg = parseGraph(f)
+  trees = parseGraph(f)
+  f.close()
+
+  f = open(fname, 'r')
+  mergeDOMParents(f, trees)
   f.close()
 
 
