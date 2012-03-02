@@ -85,8 +85,8 @@ GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels roots rootLabel
 ####  Log parsing
 ####
 
-nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) ([^\r\n]*)\r?$')
-edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) ([^\r\n]*)\r?$')
+nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) )?([^\r\n]*)\r?$')
+edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G) )?([^\r\n]*)\r?$')
 
 # A bit of a hack.  I imagine this could fail in bizarre circumstances.
 
@@ -103,7 +103,8 @@ def parseRoots (f):
     nm = nodePatt.match(l)
     if nm:
       addr = nm.group(1)
-      lbl = nm.group(2)
+      color = nm.group(2)
+      lbl = nm.group(3)
       
       if blackRoot and switchToGreyRoots(lbl):
         blackRoot = False
@@ -147,12 +148,13 @@ def parseGraph (f):
     e = edgePatt.match(l)
     if e:
       assert(currNode != None)
-      addEdge(currNode, e.group(1), e.group(2))
+      addEdge(currNode, e.group(1), e.group(3))
     else:
       nm = nodePatt.match(l)
       if nm:
         currNode = nm.group(1)
-        addNode(currNode, nm.group(2))
+        nodeColor = nm.group(2)
+        addNode(currNode, nm.group(3))
       else:
         print 'Error: Unknown line:', l[:-1]
 
