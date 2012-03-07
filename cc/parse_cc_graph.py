@@ -76,7 +76,11 @@ from collections import namedtuple
 
 
 
-GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels rcNodes gcNodes')
+GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels rcNodes gcNodes xpcRoots purpRoots')
+
+
+# experimental support for parsing purple roots
+fileHasCounts = False
 
 
 ####
@@ -87,12 +91,16 @@ nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r\n]*)\r?$')
 
 # parse CC graph
-def parseGraph (f):
+def parseGraph (f, rootCounts):
   edges = {}
   edgeLabels = {}
   nodeLabels = {}
   rcNodes = {}
   gcNodes = {}
+
+  xpcRoots = set([])
+  purpRoots = set([])
+  numNodes = 0
 
   def addNode (node, isRefCounted, nodeInfo, nodeLabel):
     assert(not node in edges)
@@ -133,6 +141,12 @@ def parseGraph (f):
       nm = nodePatt.match(l)
       if nm:
         currNode = nm.group(1)
+        numNodes += 1
+        if fileHasCounts:
+          if numNodes <= rootCounts[0]:
+            xpcRoots.add(currNode)
+          elif numNodes <= rootCounts[1]:
+            purpRoots.add(currNode)
         nodeTy = nm.group(2)
         if nodeTy == 'gc':
           isRefCounted = False
@@ -150,7 +164,8 @@ def parseGraph (f):
         print 'Error: Unknown line:', l[:-1]
 
   ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels,
-                     rcNodes=rcNodes, gcNodes=gcNodes)
+                     rcNodes=rcNodes, gcNodes=gcNodes,
+                     xpcRoots=xpcRoots, purpRoots=purpRoots)
   return (edges, ga)
 
 
@@ -183,6 +198,24 @@ def parseResults (f):
   return (knownEdges, garbage)
 
 
+
+
+# parsing of root counts
+
+countPatt = re.compile ('0x0 \[rc=([0-9]+)\] COUNT_ROOTS\r?$')
+
+def parseCounts(f):
+  print 'Warning!  Using experimental extension for parsing roots.  May be buggy.'
+  l = f.readline()
+  cpm = countPatt.match(l)
+  assert(cpm)
+  xpcCount = int(cpm.group(1))
+  l = f.readline()
+  cpm = countPatt.match(l)
+  assert(cpm)
+  purpleCount = int(cpm.group(1))
+  return (xpcCount, purpleCount)
+
 def parseCCEdgeFile (fname):
   try:
     f = open(fname, 'r')
@@ -190,7 +223,11 @@ def parseCCEdgeFile (fname):
     print 'Error opening file', fname
     exit(-1)
 
-  pg = parseGraph(f)
+  if fileHasCounts:
+    rootCounts = parseCounts(f)
+  else:
+    rootCounts = [0, 0]
+  pg = parseGraph(f, rootCounts)
   pr = parseResults(f)
   f.close()
   return (pg[0], pg[1], pr)
