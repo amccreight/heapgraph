@@ -82,36 +82,8 @@ parser.add_option("-n", '--node-name-as-root', dest='node_roots',
 options, args = parser.parse_args()
 
 if len(args) != 2:
-  print 'Expected two arguments.'
+  sys.stderr.write('Expected two arguments.\n')
   exit(0)
-
-
-
-
-# arg parse version
-#
-#parser = argparse.ArgumentParser(description='Find a rooting object in the cycle collector graph.')
-#
-#parser.add_argument('file_name',
-#                    help='cycle collector graph file name')
-#
-#parser.add_argument('target',
-#                    help='address of target object or prefix of class name of targets')
-#
-#parser.add_argument('--ignore-rc-roots', dest='ignore_rc_roots', action='store_const',
-#                    const=True, default=False,
-#                    help='ignore ref counted roots')
-#
-#parser.add_argument('--ignore-js-roots', dest='ignore_js_roots', action='store_const',
-#                    const=True, default=False,
-#                    help='ignore Javascript roots')
-#
-#parser.add_argument('--node-name-as-root', dest='node_roots',
-#                    metavar='CLASS_NAME',
-#                    help='treat nodes with this class name as extra roots')
-#
-#args = parser.parse_args()
-
 
 
 # print a node description
@@ -215,25 +187,21 @@ def findRoots (revg, ga, num_known, roots, x):
 
 def reverseGraph (g):
   g2 = {}
-  print 'Reversing graph.',
-  sys.stdout.flush()
+  sys.stderr.write('Reversing graph. ')
   for src, dsts in g.iteritems():
     for d in dsts:
       g2.setdefault(d, set([])).add(src)
-  print 'Done.'
-  print
+  sys.stderr.write('Done.\n\n')
   return g2
 
 
 def loadGraph(fname):
-  sys.stdout.write ('Parsing {0}. '.format(fname))
-  sys.stdout.flush()
+  sys.stderr.write ('Parsing {0}. '.format(fname))
   (g, ga, res) = parse_cc_graph.parseCCEdgeFile(fname)
   #sys.stdout.write ('Converting to single graph. ') 
   #sys.stdout.flush()
   g = parse_cc_graph.toSinglegraph(g)
-  print 'Done loading graph.',
-
+  sys.stderr.write('Done loading graph. ')
   return (g, ga, res)
 
 
@@ -270,12 +238,12 @@ else:
     if ga.nodeLabels.get(x, '')[0:len(target)] == target:
       targs.append(x)
   if targs == []:
-    print 'No matching class names found.'
+    sys.stderr.write('No matching class names found.\n')
 
 for a in targs:
   if a in g:
     findRoots(revg, ga, res[0], roots, a)
   else:
-    sys.stdout.write('{0} is not in the graph.\n'.format(a))
+    sys.stderr.write('{0} is not in the graph.\n'.format(a))
 
 

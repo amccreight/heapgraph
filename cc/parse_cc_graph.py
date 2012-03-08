@@ -161,7 +161,7 @@ def parseGraph (f, rootCounts):
       elif l[:10] == '==========':
         break
       else:
-        print 'Error: Unknown line:', l[:-1]
+        sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
 
   ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels,
                      rcNodes=rcNodes, gcNodes=gcNodes,
@@ -191,9 +191,9 @@ def parseResults (f):
           assert (not obj in knownEdges)
           knownEdges[obj] = int(km.group(1))
         else:
-          print 'Error: Unknown result entry type:', tag
+          sys.stderr.write('Error: Unknown result entry type:' + tag + '\n')
     else:
-      print 'Error: Unknown result entry:', l[:-1]
+      sys.stderr.write('Error: Unknown result entry:' + l[:-1] + '\n')
 
   return (knownEdges, garbage)
 
@@ -220,7 +220,7 @@ def parseCCEdgeFile (fname):
   try:
     f = open(fname, 'r')
   except:
-    print 'Error opening file', fname
+    sys.stderr.write('Error opening file' + fname + '\n')
     exit(-1)
 
   if fileHasCounts:
@@ -311,7 +311,7 @@ if False:
   # A few simple tests
 
   if len(sys.argv) < 2:
-    print 'Not enough arguments.'
+    sys.stderr.write('Not enough arguments.\n')
     exit()
 
   #import cProfile
