@@ -66,26 +66,13 @@ import argparse
 
 # Command line arguments
 
-parser = argparse.ArgumentParser(description='Find a rooting object in the cycle collector graph.')
+parser = argparse.ArgumentParser(description='Find a rooting object in the garbage collector graph.')
 
 parser.add_argument('file_name',
                     help='cycle collector graph file name')
 
 parser.add_argument('target',
                     help='address of target object or prefix of class name of targets')
-
-parser.add_argument('--ignore-rc-roots', dest='ignore_rc_roots', action='store_const',
-                    const=True, default=False,
-                    help='ignore ref counted roots')
-
-parser.add_argument('--ignore-js-roots', dest='ignore_js_roots', action='store_const',
-                    const=True, default=False,
-                    help='ignore Javascript roots')
-
-parser.add_argument('--node-name-as-root', dest='node_roots',
-                    metavar='CLASS_NAME',
-                    help='treat nodes with this class name as extra roots')
-
 
 args = parser.parse_args()
 
@@ -145,7 +132,7 @@ def findRoots (revg, ga, roots, x):
     if y in visited:
       return False
     visited.add(y)
-    if y in roots and roots[y]:   # should add option to trace to gray roots
+    if y in roots: # and roots[y]:  roots[y] is true for black roots
       path.reverse()
       print_path(revg, ga, roots, x, path)
       path.reverse()
