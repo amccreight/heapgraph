@@ -70,6 +70,10 @@ parser.add_option('--prune-non-js',
                   action='store_true', dest='prune_non_js',
                   help='prune non-JS nodes from the graph')
 
+parser.add_option('--prune-non-js-border',
+                  action='store_true', dest='prune_non_js_border',
+                  help='prune non-JS, non-border nodes from the graph')
+
 parser.add_option('--prune-marked-js',
                   action='store_true', dest='prune_marked_js',
                   help='prune marked JS nodes from the graph')
@@ -81,6 +85,10 @@ parser.add_option('--prune-garbage',
 parser.add_option('--no-info-parent-prune',
                   action='store_true', dest='no_info_parent_prune',
                   help='don\'t prune nsNodeInfo and GetParent() edges from the graph')
+
+parser.add_option('--merge-file',
+                  action='store_true', dest='merge_file',
+                  help='Reading merging information from a file')
 
 parser.add_option('--min-copies',
                   action='store', dest='min_copies', type='int',
@@ -102,9 +110,6 @@ if len(sys.argv) < 2:
 
 
 # I really need to make a lot of these command line options.
-
-precise_node_name = False    # use a more complete class name
-       # eg "nsNodeInfo (xhtml) span" instead of "nsNodeInfo"
 
 show_roots = True   # shade graph roots
 
@@ -137,7 +142,7 @@ REMOVE_DUPS = False     # remove duplicates.  If False, highlight them on the gr
 ####################
 
 
-DrawAttribs = namedtuple('DrawAttribs', 'edgeLabels nodeLabels rcNodes gcNodes roots garbage colors')
+DrawAttribs = namedtuple('DrawAttribs', 'edgeLabels nodeLabels rcNodes gcNodes roots garbage colors mergeCounts')
 
 
 ####
@@ -1210,17 +1215,33 @@ def split_graph (g):
 # even as options change.
 
 def node_label_string (x, ga):
+  if x in ga.mergeCounts and ga.mergeCounts[x] != 1:
+    return 'M:' + str(ga.mergeCounts[x])
   if options.html_labels:
     l = ga.nodeLabels[x]
     if l.startswith('nsGenericElement (xhtml)'):
       return '<' + l[25:] + '>'
     if l.startswith('nsGenericElement (XUL)'):
-      return '<<' + l[23:] + '>>'
+      return 'XUL<' + l[23:] + '>'
+    if l.startswith('nsGenericElement (XBL)'):
+      return 'XBL<' + l[23:] + '>'
   if options.node_class_labels and x not in ga.colors:
     label = ga.nodeLabels[x]
     # should spin this out into a more comprehensive label canonization
     if label.startswith('nsDocument normal (xhtml)'):
-      label = 'nsDocument normal (xhtml)';
+      label = 'nsDocument normal (xhtml)'
+    if label.startswith('nsNodeInfo (XUL)'):
+      label = 'nsNodeInfo (XUL)'
+    if label.startswith('nsNodeInfo (XBL)'):
+      label = 'nsNodeInfo (XBL)'
+    if label.startswith('nsNodeInfo (xhtml)'):
+      label = 'nsNodeInfo (xhtml)'
+    if label.startswith('JS Object (Function'):
+      label = 'Fn'
+    elif label.startswith('JS Object ('):
+      label = label[11:-1]
+    elif label.startswith('JS Script'):
+      label = 'Script'
   elif options.node_address_labels:
     label = x
   else:
@@ -1248,15 +1269,18 @@ def node_format_string (x, ga):
   # shape
   if x in ga.rcNodes:
     if x in ga.garbage:
-      shape = 'triangle'
+#      shape = 'triangle'
+      shape = 'hexagon'
     elif l != '':
       shape = 'ellipse'
     else:
       shape = 'circle'
   else:
-    assert(x in ga.gcNodes)
+    if not x in ga.gcNodes:
+      print x, "not found in gcNodes!"
+      exit(-1)
     if x in ga.garbage:
-      shape = 'invtriangle'
+      shape = 'box' # 'invtriangle'
     elif options.node_class_labels:
       shape = 'box'
     else:
@@ -1538,7 +1562,7 @@ if COMPUTE_ACYCLIC:
     # can't just remove the calculated nodes with dfs3
   else:
     print 'marking acyclic nodes'
-    ga = ga._replace(shadies = ga.shadies | acycnodes)    
+    ga = ga._replace(shadies = ga.shadies | acycnodes)
 
   if False:
     careAbout = set(['nsDocument', 'nsGenericDOMDataNode', 'nsGenericElement', 'nsDOMAttribute'])
@@ -1632,6 +1656,28 @@ def prune_non_js (g, ga):
   generic_remover (g, js_pred, 'non-JS nodes.')
 
 
+def prune_non_js_border (g, ga):
+  gcn = set(ga.gcNodes.keys())
+  rcn = set(ga.rcNodes.keys())
+
+  border = set([])
+#  for x in rcn:
+#    if x in g:
+#      for y in g[x]:
+#        if y in gcn:
+#          border.add(x)
+  for x in gcn:
+    if x in g:
+      for y in g[x]:
+        if y in rcn:
+          border.add(y)
+
+  def js_pred (x):
+    return not (x in gcn or x in border)
+
+  generic_remover (g, js_pred, 'non-border-JS nodes.')
+
+
 def prune_marked_js (g, ga):
   s = set([])
   for x, marked in ga.gcNodes.iteritems():
@@ -1660,15 +1706,60 @@ def prune_garbage (g, ga):
 
 # these create a lot of noise in the graph
 def prune_info_parent_edges (g, ga):
-  count = 0
+  niCount = 0
+  gpCount = 0
+  momCount = 0
+
   for x in g.keys():
     for e in list(g[x]):
       ename = ga.edgeLabels[x].get(e, [''])[0]
-      if ename == 'mNodeInfo' or ename == 'GetParent()':
+      if ename == 'mNodeInfo':
         g[x].remove(e)
-        count += 1
+        niCount += 1
+      if ename == 'GetParent()':
+        g[x].remove(e)
+        gpCount += 1
+      if ename == 'mOwnerManager':
+        g[x].remove(e)
+        momCount += 1
+      # remove this
+      #if ename == 'parent':
+      #  g[x].remove(e)
+      # remove this
+      #if ename == 'type_proto':
+      #  g[x].remove(e)
 
-  print 'Removed', count, 'nsNodeInfo and GetParent() edges.'
+  print 'Removed', niCount, 'nsNodeInfo,', gpCount, 'GetParent(), and', momCount, 'mOwnerManager edges.'
+
+
+# compute the set of GCed nodes that don't reach RCed nodes.
+def green_gc_nodes (g, ga):
+  gcn = set(ga.gcNodes.keys())
+  non_green = set(ga.rcNodes.keys())
+  any_new = True
+
+  while any_new:
+    any_new = False
+    new_non_green = set([])
+    for x in gcn:
+      if x in g:
+        if len(g[x].intersection(non_green)) != 0:
+          new_non_green.add(x)
+          anyNew = True
+    gcn = gcn - new_non_green
+    non_green = non_green | new_non_green
+
+  return gcn
+
+
+def prune_green_js (g, ga):
+  green = green_gc_nodes(g, ga)
+
+  def green_pred (x):
+    return x in green
+
+  generic_remover (g, green_pred, 'green nodes.')
+
 
 
 # analyze the graphs
@@ -1696,9 +1787,10 @@ def analyze_graphs():
       other_graphs.append((num_nodes, x))
 
 
-label_color = {'nsJSEventListener':'purple',
+label_color = { #'nsJSEventListener':'purple',
                'nsXULPrototypeNode':'pink',
-               'nsGenericDOMDataNode':'red'}
+               'nsGenericDOMDataNode':'red',
+               'nsDOMCSSAttributeDeclaration':'orange'}
 
 #               'nsGenericElement (xhtml) form':'green',
 #               'nsGenericElement (xhtml) input':'yellow',
@@ -1709,19 +1801,35 @@ label_color = {'nsJSEventListener':'purple',
 
 
 
-def make_colors (nodeLabels):
+def make_colors_from_labels (nodeLabels):
   colors = {}
   for x, lbl in nodeLabels.iteritems():
     if lbl in label_color:
       colors[x] = label_color[lbl]
-    elif lbl.startswith('nsGenericElement (XUL)'):
-      colors[x] = 'green'
+#    elif lbl.startswith('nsGenericElement (XUL)'):
+#      colors[x] = 'green'
     elif lbl.startswith('nsGenericElement (xhtml)'):
       colors[x] = 'blue'
-    elif lbl == 'nsBaseContentList':
-      colors[x] = 'orange'
-    elif lbl == 'nsContentSink':
-      colors[x] = 'magenta'
+#    elif lbl.startswith('XPCWrappedNative'):
+#      colors[x] = 'magenta'
+#    elif lbl == 'nsBaseContentList':
+#      colors[x] = 'orange'
+#    elif lbl == 'nsContentSink':
+#      colors[x] = 'magenta'
+  return colors
+
+root_colors = False
+
+def make_colors (ga):
+  # how to integrate these?
+  if root_colors:
+    colors = {}
+    for x in ga.xpcRoots:
+      colors[x] = 'red'
+    for x in ga.purpRoots:
+      colors[x] = 'purple'
+  else:
+    colors = make_colors_from_labels(ga.nodeLabels)
   return colors
 
 
@@ -1737,7 +1845,8 @@ def make_draw_attribs (ga, res):
 
   return DrawAttribs (edgeLabels=ga.edgeLabels, nodeLabels=ga.nodeLabels,
                       rcNodes=ga.rcNodes, gcNodes=ga.gcNodes, roots=roots,
-                      garbage=res[1], colors=make_colors(ga.nodeLabels))
+                      garbage=res[1], colors=make_colors(ga),
+                      mergeCounts = {})
 
 
 # remove graph nodes that aren't within k steps of nodes of a given name
@@ -1768,6 +1877,34 @@ def split_neighbor (g, ga, name, k):
       del g[n]
 
 
+def merge_from_file(g, fname):
+  sys.stderr.write('Merging from file ' + fname + '.\n')
+  fin = open(fname)
+  merges = {}
+  merged_to = {}
+
+  # compute the merge map
+  for l in fin:
+    lsplit = l.strip().split(' ')
+    merge_to = lsplit[0]
+    # this count may be wrong
+    merged_to[merge_to] = len(lsplit) - 1
+    for x in lsplit:
+      assert(not x in merges or x == merge_to)
+      merges[x] = merge_to
+
+  # merge nodes
+  g2 = {}
+  for src, edges in g.iteritems():
+    src2 = merges.get(src, src)
+    if not src2 in g2:
+      g2[src2] = set([])
+    for dst in edges:
+      g2[src2].add(merges.get(dst, dst))
+
+  return (g2, merged_to)
+
+
 def loadGraph(fname):
   sys.stdout.write ('Parsing {0}. '.format(fname))
   sys.stdout.flush()
@@ -1787,18 +1924,26 @@ file_name = args[0]
 
 # pre-pruning
 
-
-#split_neighbor(g, ga, 'nsJSEventListener', 3)
 if not options.no_info_parent_prune:
   prune_info_parent_edges(g, ga)
+
+if options.merge_file:
+  (g, merged_to) = merge_from_file(g, 'merging.txt')
+  ga = ga._replace(mergeCounts = merged_to)
+
 if options.prune_garbage:
   prune_garbage(g, ga)
 if options.prune_js:
   prune_js(g, ga)
 if options.prune_non_js:
   prune_non_js (g, ga)
+if options.prune_non_js_border:
+  prune_non_js_border (g, ga)
 if options.prune_marked_js:
   prune_marked_js(g, ga)
+
+#prune_green_js (g, ga)
+
 #prune_js_listener(g, ga)
 #prune_no_childs(g)
 if options.merge_js:
@@ -1860,6 +2005,9 @@ if options.merge_js:
   for x, count in mergies.iteritems():
     if count > 10:
       outf.write('  q{0} [label="{1}", shape=square, color=red];'.format(x, count))
+
+#for x, count in merged_to.iteritems():
+#  outf.write('  q{0} [label="{1}", shape=circle, color=red];\n'.format(x, count))
 
 outf.write('}\n')
 outf.close()
