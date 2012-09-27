@@ -65,17 +65,20 @@ def parseGraph (f):
   gcNodes = {}
 
   def addNode (node, isRefCounted, nodeInfo, nodeLabel):
-    assert(not node in nodes)
+    # commented out due to bug in Node logging
+    # assert(not node in nodes)
     nodes.add(node)
     if isRefCounted:
-      assert (not node in rcNodes)
+      # commented out due to bug in Node logging
+      # assert (not node in rcNodes)
       rcNodes[node] = nodeInfo
     else:
       assert (not node in gcNodes)
       gcNodes[node] = nodeInfo
     assert(nodeLabel != None)
     if nodeLabel != '':
-      assert (not node in nodeLabels)
+      # commented out due to bug in Node logging
+      # assert (not node in nodeLabels)
       nodeLabels[node] = nodeLabel
 
   currNode = None
@@ -98,7 +101,7 @@ def parseGraph (f):
         isRefCounted = True
         nodeInfo = int(nodeTy[3:])
       addNode(currNode, isRefCounted, nodeInfo, nm.group(3))
-    elif l == '==========\n':
+    elif l.startswith('=========='):
       break
     else:
       print 'Error: Unknown line:', l[:-1]

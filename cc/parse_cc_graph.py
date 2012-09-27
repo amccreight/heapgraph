@@ -90,6 +90,8 @@ fileHasCounts = False
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r\n]*)\r?$')
 
+checkForDoubleLogging = true
+
 # parse CC graph
 def parseGraph (f, rootCounts):
   edges = {}
@@ -103,19 +105,23 @@ def parseGraph (f, rootCounts):
   numNodes = 0
 
   def addNode (node, isRefCounted, nodeInfo, nodeLabel):
-    assert(not node in edges)
+    if checkForDoubleLogging:
+      assert(not node in edges)
     edges[node] = {}
-    assert(not node in edgeLabels)
+    if checkForDoubleLogging:
+      assert(not node in edgeLabels)
     edgeLabels[node] = {}
     if isRefCounted:
-      assert (not node in rcNodes)
+      if checkForDoubleLogging:
+        assert (not node in rcNodes)
       rcNodes[node] = nodeInfo
     else:
       assert (not node in gcNodes)
       gcNodes[node] = nodeInfo
     assert(nodeLabel != None)
     if nodeLabel != '':
-      assert (not node in nodeLabels)
+      if checkForDoubleLogging:
+        assert (not node in nodeLabels)
       nodeLabels[node] = nodeLabel
 
   currNode = None
