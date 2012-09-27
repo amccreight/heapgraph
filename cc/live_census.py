@@ -65,7 +65,15 @@ def print_node (ga, x):
 
 obj_patt = re.compile ('(JS Object \([^\)]+\)) \(global=[0-9a-fA-F]*\)')
 
-starts_with = set (['nsGenericElement (XUL)', 'nsGenericElement (xhtml)', 'nsGenericElement (XBL)', \
+#starts_with = set (['nsGenericElement (XUL)', 'nsGenericElement (xhtml)', 'nsGenericElement (XBL)', \
+#                      'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
+#                      'nsXPCWrappedJS', 'JS Object', 'nsDocument', 'XPCWrappedNative'])
+
+starts_with = set (['nsGenericElement (XUL)', \
+                      'nsGenericElement (xhtml) span ', \
+                      'nsGenericElement (xhtml) a ', \
+                      'nsGenericElement (xhtml) input ', \
+                      'nsGenericElement (XBL)', \
                       'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
                       'nsXPCWrappedJS', 'JS Object', 'nsDocument', 'XPCWrappedNative'])
 
