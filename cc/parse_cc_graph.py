@@ -90,7 +90,7 @@ fileHasCounts = False
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r\n]*)\r?$')
 
-checkForDoubleLogging = true
+checkForDoubleLogging = True
 
 # parse CC graph
 def parseGraph (f, rootCounts):
