@@ -80,6 +80,9 @@ def parseRoots (f):
       rootLabels[addr] = lbl
     elif l[:10] == '==========':
       break
+    elif l[0] == '#':
+      # Skip over comments.
+      continue
     else:
       print "Error: unknown line ", l
       exit(-1)
