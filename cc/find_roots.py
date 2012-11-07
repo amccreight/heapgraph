@@ -238,7 +238,8 @@ else:
     if ga.nodeLabels.get(x, '')[0:len(target)] == target:
       targs.append(x)
   if targs == []:
-    sys.stderr.write('No matching class names found.\n')
+    sys.stdout.write('Guessing that argument ' + target + ' is an address.\n')
+    targs = [target]
 
 for a in targs:
   if a in g:
