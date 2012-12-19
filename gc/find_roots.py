@@ -100,7 +100,7 @@ def findRoots (revg, ga, roots, x):
     if y in visited:
       return False
     visited.add(y)
-    if y in roots: # and roots[y]:  roots[y] is true for black roots
+    if y in roots and roots[y]: # roots[y] is true for black roots
       path.reverse()
       print_path(revg, ga, roots, x, path)
       path.reverse()
