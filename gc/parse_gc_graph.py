@@ -126,6 +126,9 @@ def parseGraph (f):
         currNode = nm.group(1)
         nodeColor = nm.group(2)
         addNode(currNode, nm.group(3))
+      elif l[0] == '#':
+        # Skip over comments.
+        continue
       else:
         print 'Error: Unknown line:', l[:-1]
 
