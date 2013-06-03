@@ -150,7 +150,7 @@ def findRoots (revg, ga, num_known, roots, x):
   findRootsDFS(x)
 
   if not anyFound[0]:
-    print 'No roots found.'
+    print 'No roots found for', x
 
 
 def reverseGraph (g):
