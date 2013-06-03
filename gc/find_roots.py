@@ -45,6 +45,11 @@ parser.add_argument('target',
 args = parser.parse_args()
 
 
+# If this is True, only trace from black roots. Otherwise, also trace from gray roots.
+blackRootsOnly = True
+
+
+
 
 # print a node description
 def print_node (ga, x):
@@ -100,7 +105,7 @@ def findRoots (revg, ga, roots, x):
     if y in visited:
       return False
     visited.add(y)
-    if y in roots and roots[y]: # roots[y] is true for black roots
+    if y in roots and (not blackRootsOnly or roots[y]): # roots[y] is true for black roots
       path.reverse()
       print_path(revg, ga, roots, x, path)
       path.reverse()
