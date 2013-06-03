@@ -10,7 +10,7 @@
 
 # This documentation hasn't been updated.
 
-# parseCCEdgeFile (file_name): given the file name of a CC edge file, parse and 
+# parseCCEdgeFile (file_name): given the file name of a CC edge file, parse and
 #   return the data.  This function returns a tuple with two components.
 #
 #   The first component is a multigraph representing the nodes and
@@ -73,11 +73,15 @@ def parseRoots (f):
       addr = nm.group(1)
       color = nm.group(2)
       lbl = nm.group(3)
-      
+
       if blackRoot and switchToGreyRoots(lbl):
         blackRoot = False
-      roots[addr] = blackRoot
-      rootLabels[addr] = lbl
+
+      # Don't overwrite an existing root, to avoid replacing a black root with a gray root.
+      if not addr in roots:
+        roots[addr] = blackRoot
+        # It would be classier to save all the root labels, though then we have to worry about gray vs black.
+        rootLabels[addr] = lbl
     elif l[:10] == '==========':
       break
     elif l[0] == '#':
