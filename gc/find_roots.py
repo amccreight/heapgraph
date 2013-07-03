@@ -46,7 +46,7 @@ args = parser.parse_args()
 
 
 # If this is True, only trace from black roots. Otherwise, also trace from gray roots.
-blackRootsOnly = True
+blackRootsOnly = False
 
 
 
