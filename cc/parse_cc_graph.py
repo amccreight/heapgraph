@@ -7,7 +7,7 @@
 # Library for parsing cycle collector log files into a graph data structure.
 
 
-# parseCCEdgeFile (file_name): given the file name of a CC edge file, parse and 
+# parseCCEdgeFile (file_name): given the file name of a CC edge file, parse and
 #   return the data.  This function returns a tuple with two components.
 #
 #   The first component is a multigraph representing the nodes and

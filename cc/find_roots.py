@@ -89,7 +89,7 @@ def explain_root (revg, ga, num_known, roots, root):
   assert(roots[root] == 'rcRoot')
   print 'is a ref counted object with', ga.rcNodes[root] - num_known[root], \
       'unknown edge(s).'
-  
+
   if root in revg:
     print '    known edges:'
     for e in revg[root]:
@@ -166,7 +166,7 @@ def reverseGraph (g):
 def loadGraph(fname):
   sys.stderr.write ('Parsing {0}. '.format(fname))
   (g, ga, res) = parse_cc_graph.parseCCEdgeFile(fname)
-  #sys.stdout.write ('Converting to single graph. ') 
+  #sys.stdout.write ('Converting to single graph. ')
   #sys.stdout.flush()
   g = parse_cc_graph.toSinglegraph(g)
   sys.stderr.write('Done loading graph. ')
@@ -184,7 +184,7 @@ def selectRoots(g, ga, res):
     elif ga.nodeLabels.get(x, '') == options.node_roots:
       roots[x] = 'stopNodeLabel'
 
-  return roots      
+  return roots
 
 
 ####################
