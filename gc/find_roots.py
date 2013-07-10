@@ -12,7 +12,7 @@ import argparse
 
 
 
-# this comment is out of date
+# (this comment is out of date)
 
 
 # Find the objects that are rooting a particular object (or objects of
