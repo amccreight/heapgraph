@@ -48,7 +48,9 @@ args = parser.parse_args()
 # If this is True, only trace from black roots. Otherwise, also trace from gray roots.
 blackRootsOnly = False
 
-
+# If this is non-None, use all strings containing this string as the target.
+#stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
+stringTarget = None
 
 
 # print a node description
@@ -147,12 +149,26 @@ def loadGraph(fname):
   sys.stdout.write ('Parsing {0}. '.format(fname))
   sys.stdout.flush()
   (g, ga) = parse_gc_graph.parseGCEdgeFile(fname)
-  #sys.stdout.write ('Converting to single graph. ') 
+  #sys.stdout.write ('Converting to single graph. ')
   #sys.stdout.flush()
   g = parse_gc_graph.toSinglegraph(g)
   print 'Done loading graph.',
 
   return (g, ga)
+
+
+def stringTargets(ga, stringTarget):
+  targs = []
+
+  for addr, lbl in ga.nodeLabels.iteritems():
+    if not lbl.startswith('string '):
+      continue
+    s = lbl[7:]
+    if stringTarget == s:
+    #if stringTarget in s:
+      targs.append(addr)
+
+  return targs
 
 
 ####################
@@ -164,7 +180,9 @@ addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
 roots = ga.roots
 revg = reverseGraph(g)
 
-if addrPatt.match(args.target):
+if stringTarget:
+  targs = stringTargets(ga, stringTarget)
+elif addrPatt.match(args.target):
   targs = [args.target]
 else:
   # look for objects with a class name prefixes, not a particular object
