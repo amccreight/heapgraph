@@ -147,15 +147,16 @@ def findRoots (revg, ga, roots, x):
         print_path(revg, ga, roots, x, path)
       path.reverse()
       anyFound[0] = True
-    else:
-      if not y in revg:
-        return False
-      path.append(None)
-      for z in revg[y]:
-        path[-1] = (z, y)
-        if findRootsDFS(z):
-          return True
-      path.pop()
+
+    # Whether or not y is a root, we want to find other paths to y.
+    if not y in revg:
+      return False
+    path.append(None)
+    for z in revg[y]:
+      path[-1] = (z, y)
+      if findRootsDFS(z):
+        return True
+    path.pop()
     return False
 
   if not x in revg:
