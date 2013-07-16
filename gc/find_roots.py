@@ -52,6 +52,11 @@ blackRootsOnly = False
 #stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
 stringTarget = None
 
+# If True, show a simple path in a single line that tries to elide
+# addresses. This is useful for getting a broader impression of what
+# is happening when there are many similar paths.
+simplePath = False
+
 
 # print a node description
 def print_node (ga, x):
@@ -97,6 +102,33 @@ def print_path (revg, ga, roots, x, path):
   print
 
 
+def print_simple_node (ga, x):
+  sys.stdout.write ('[{0}]'.format(ga.nodeLabels[x]))
+
+def simple_explain_root (ga, root):
+  # This won't work on Windows.
+  l = re.sub(r'0x[0-9a-f]{8}', '*', ga.rootLabels[root])
+  #l = addrPatt.sub("ADDR", ga.rootLabels[root])
+  #l = ga.rootLabels[root]
+  print "via", l, ":",
+
+# produce a simplified version of the path, with the intent of
+# eliminating differences that are uninteresting with a large set of
+# paths.
+def print_simple_path (revg, ga, roots, x, path):
+  if path == []:
+    simple_explain_root(ga, x)
+  else:
+    simple_explain_root(ga, path[0][0])
+
+  for p in path:
+    print_simple_node(ga, p[0])
+    sys.stdout.write(', ')
+    print_edge(ga, p[0], p[1])
+    sys.stdout.write(' ')
+  print_simple_node(ga, x)
+  print
+
 # look for roots and print out the paths to the given object
 def findRoots (revg, ga, roots, x):
   visited = set([])
@@ -109,7 +141,10 @@ def findRoots (revg, ga, roots, x):
     visited.add(y)
     if y in roots and (not blackRootsOnly or roots[y]): # roots[y] is true for black roots
       path.reverse()
-      print_path(revg, ga, roots, x, path)
+      if simplePath:
+        print_simple_path(revg, ga, roots, x, path)
+      else:
+        print_path(revg, ga, roots, x, path)
       path.reverse()
       anyFound[0] = True
     else:
