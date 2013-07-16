@@ -46,7 +46,7 @@ args = parser.parse_args()
 
 
 # If this is True, only trace from black roots. Otherwise, also trace from gray roots.
-blackRootsOnly = False
+blackRootsOnly = True
 
 # If this is non-None, use all strings containing this string as the target.
 #stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
