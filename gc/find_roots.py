@@ -42,6 +42,10 @@ parser.add_argument('file_name',
 parser.add_argument('target',
                     help='address of target object or prefix of class name of targets')
 
+parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_true',
+                    default=False,
+                    help='Print paths on a single line and remove addresses to help large-scale analysis of paths.')
+
 args = parser.parse_args()
 
 
@@ -51,11 +55,6 @@ blackRootsOnly = False
 # If this is non-None, use all strings containing this string as the target.
 #stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
 stringTarget = None
-
-# If True, show a simple path in a single line that tries to elide
-# addresses. This is useful for getting a broader impression of what
-# is happening when there are many similar paths.
-simplePath = False
 
 
 # print a node description
@@ -141,7 +140,7 @@ def findRoots (revg, ga, roots, x):
     visited.add(y)
     if y in roots and (not blackRootsOnly or roots[y]): # roots[y] is true for black roots
       path.reverse()
-      if simplePath:
+      if args.simple_path:
         print_simple_path(revg, ga, roots, x, path)
       else:
         print_path(revg, ga, roots, x, path)
