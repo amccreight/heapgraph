@@ -133,7 +133,8 @@ def parseGraph (f, rootCounts):
         addNode(currNode, isRefCounted, nodeInfo, nm.group(3))
       elif l[:10] == '==========':
         break
-      else:
+      # Lines starting with '#' are comments, so ignore them.
+      elif l[0] != '#':
         sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
 
   ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels,
