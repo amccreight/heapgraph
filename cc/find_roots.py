@@ -192,8 +192,20 @@ def selectTargets (g, ga, target):
   if target[0] == '0':
     return [target]
 
-  # look for objects with a class name prefix, not a particular object
   targs = []
+
+  # Magic target: look for an nsFrameLoader with a refcount of 1.
+  if target == 'nsFrameLoader1':
+    target = 'nsFrameLoader'
+    for x in g.keys():
+      if ga.nodeLabels.get(x, '')[0:len(target)] == target and ga.rcNodes[x] == 1:
+        targs.append(x)
+    if len(targs) == 0:
+      print('Didn\'t find any nsFrameLoaders with refcount of 1')
+      exit(-1)
+    return targs
+
+  # look for objects with a class name prefix, not a particular object
   for x in g.keys():
     if ga.nodeLabels.get(x, '')[0:len(target)] == target:
       targs.append(x)
