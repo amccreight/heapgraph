@@ -187,6 +187,23 @@ def selectRoots(g, ga, res):
   return roots
 
 
+def selectTargets (g, ga, target):
+  # won't work on windows if you are searching for an address that starts with anything besides 0
+  if target[0] == '0':
+    return [target]
+
+  # look for objects with a class name prefix, not a particular object
+  targs = []
+  for x in g.keys():
+    if ga.nodeLabels.get(x, '')[0:len(target)] == target:
+      targs.append(x)
+  if targs == []:
+    sys.stdout.write('Guessing that argument ' + target + ' is an address.\n')
+    targs = [target]
+
+  return targs
+
+
 ####################
 
 file_name = args[0]
@@ -196,18 +213,7 @@ target = args[1]
 roots = selectRoots(g, ga, res)
 revg = reverseGraph(g)
 
-# won't work on windows if you are searching for an address that starts with anything besides 0
-if target[0] == '0':
-  targs = [target]
-else:
-  # look for objects with a class name prefix, not a particular object
-  targs = []
-  for x in g.keys():
-    if ga.nodeLabels.get(x, '')[0:len(target)] == target:
-      targs.append(x)
-  if targs == []:
-    sys.stdout.write('Guessing that argument ' + target + ' is an address.\n')
-    targs = [target]
+targs = selectTargets(g, ga, target)
 
 for a in targs:
   if a in g:
