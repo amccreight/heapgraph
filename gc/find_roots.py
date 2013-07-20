@@ -48,7 +48,8 @@ parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_tr
 
 parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
                     default=False,
-                    help='Experimental dot mode.')
+                    help='Experimental dot mode.  Outputs to graph.dot.')
+# Convert dot file to a PDF with 'sfdp -Gsize=67! -Goverlap=prism -Tpdf -O graph.dot'
 
 
 args = parser.parse_args()
@@ -334,18 +335,48 @@ def finishDotMode(ga):
     for y in dsts:
       new_dsts.add(canon_node(y))
     x = canon_node(x)
+    if x in new_dsts:
+      new_dsts.remove(x)
     new_edges[x] = new_edges.get(x, set([])).union(new_dsts)
   edges = new_edges
 
 
   # output the dot file
 
-  outf = open('foo.dot', 'w')
+  outf = open('graph.dot', 'w')
   outf.write('digraph {\n')
 
   for n in nodes:
-    lbl = ga.nodeLabels.get(n, '')[:10]
-    outf.write('  node [shape = circle, label="{1}"] q{0};\n'.format(n, lbl))
+    lbl = ga.nodeLabels.get(n, '')
+    if lbl.startswith('Object'):
+      lbl = lbl[6:]
+      shape = 'square'
+      color = 'black'
+    elif lbl.startswith('Function'):
+      lbl = lbl[9:]
+      shape = 'ellipse'
+      color = 'black'
+    elif lbl.startswith('HTML'):
+      lbl = lbl[4:]
+      shape = 'diamond'
+      color = 'blue'
+    elif lbl.startswith('XPCWrappedNative'):
+      lbl = 'XPCWN' + lbl[16:]
+      shape = 'diamond'
+      color = 'black'
+    elif lbl.startswith('script'):
+      if lbl.startswith('script app://system.gaiamobile.org/'):
+        lbl = lbl[35:]
+      else:
+        lbl = lbl[7:]
+      shape = 'ellipse'
+      color = 'red'
+    else:
+      shape = 'circle'
+      color = 'black'
+    if lbl.endswith('<no private>'):
+      lbl = lbl[:-13]
+    outf.write('  node [color = {3}, shape = {2}, label="{1}"] q{0};\n'.format(n, lbl[:15], shape, color))
 
   for x, dsts in edges.iteritems():
     for y in dsts:
