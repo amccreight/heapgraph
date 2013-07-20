@@ -211,6 +211,23 @@ def stringTargets(ga, stringTarget):
   return targs
 
 
+def selectTargets (g, ga, target):
+  if stringTarget:
+    targs = stringTargets(ga, stringTarget)
+  elif addrPatt.match(target):
+    targs = [target]
+  else:
+    # look for objects with a class name prefixes, not a particular object
+    targs = []
+    for x in g.keys():
+      if ga.nodeLabels.get(x, '')[0:len(target)] == target:
+        targs.append(x)
+    if targs == []:
+      print 'No matching class names found.'
+
+  return targs
+
+
 ####################
 
 addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
@@ -220,18 +237,8 @@ addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
 roots = ga.roots
 revg = reverseGraph(g)
 
-if stringTarget:
-  targs = stringTargets(ga, stringTarget)
-elif addrPatt.match(args.target):
-  targs = [args.target]
-else:
-  # look for objects with a class name prefixes, not a particular object
-  targs = []
-  for x in g.keys():
-    if ga.nodeLabels.get(x, '')[0:len(args.target)] == args.target:
-      targs.append(x)
-  if targs == []:
-    print 'No matching class names found.'
+
+targs = selectTargets(g, ga, args.target)
 
 for a in targs:
   if a in g:
