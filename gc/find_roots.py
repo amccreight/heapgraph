@@ -46,6 +46,11 @@ parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_tr
                     default=False,
                     help='Print paths on a single line and remove addresses to help large-scale analysis of paths.')
 
+parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
+                    default=False,
+                    help='Experimental dot mode.')
+
+
 args = parser.parse_args()
 
 
