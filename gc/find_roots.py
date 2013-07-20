@@ -133,6 +133,19 @@ def print_simple_path (revg, ga, roots, x, path):
   print_simple_node(ga, x)
   print
 
+
+def add_dot_mode_path(revg, ga, roots, x, path):
+  if path == []:
+    newPath = [x]
+  else:
+    newPath = [path[0][0]]
+
+  for p in path:
+    newPath.append(p[1])
+
+  gPaths.append(newPath)
+
+
 # look for roots and print out the paths to the given object
 def findRoots (revg, ga, roots, x):
   visited = set([])
@@ -147,6 +160,8 @@ def findRoots (revg, ga, roots, x):
       path.reverse()
       if args.simple_path:
         print_simple_path(revg, ga, roots, x, path)
+      elif args.dot_mode:
+        add_dot_mode_path(revg, ga, roots, x, path)
       else:
         print_path(revg, ga, roots, x, path)
       path.reverse()
@@ -228,6 +243,118 @@ def selectTargets (g, ga, target):
   return targs
 
 
+
+#######
+# union find with path compression and union by rank
+
+def findi (m, x):
+  if not x in m:
+    m[x] = [x, 0]
+    return m[x]
+  if m[x][0] == x:
+    return m[x]
+  z = findi (m, m[x][0])
+  m[x] = z
+  return z
+
+def find (m, x):
+  return findi(m, x)[0]
+
+def union (m, rep, x, y):
+  xp = findi (m, x)
+  yp = findi (m, y)
+  if xp == yp:
+    return
+  if xp[1] < yp[1]:
+    rep[yp[0]] = rep.get(xp[0], xp[0])
+    if xp[0] in rep:
+      del rep[xp[0]]
+    m[xp[0]][0] = yp[0]
+  elif xp[1] > yp[1]:
+    m[yp[0]][0] = xp[0]
+  else:
+    m[yp[0]][0] = xp[0]
+    m[xp[0]][1] += 1
+
+
+#######
+# dotify support
+
+gPaths = []
+
+
+def finishDotMode(ga):
+
+  # build the set of nodes
+  nodes = set([])
+  for p in gPaths:
+    for x in p:
+      nodes.add(x)
+
+  # build the edge map
+  edges = {}
+
+  for p in gPaths:
+    prevNode = None
+    for x in p:
+      if prevNode:
+        edges.setdefault(prevNode, set([])).add(x)
+      prevNode = x
+
+  # compress shapes
+  shape_merge = {}
+  shape_rep = {}
+
+  for x in nodes:
+    if ga.nodeLabels.get(x, '') != 'shape':
+      continue
+    if not x in edges:
+      continue
+    for y in edges[x]:
+      if ga.nodeLabels.get(y, '') != 'shape' and ga.nodeLabels.get(y, '') != 'base_shape':
+        continue
+      union(shape_merge, shape_rep, y, x)
+      break
+
+  def canon_node(x):
+    y = find(shape_merge, x)
+    if y in shape_rep:
+      y = shape_rep[y]
+    return y
+
+  # Remove merged away nodes
+  for x in shape_merge.keys():
+    if canon_node(x) != x:
+      nodes.remove(x)
+
+  # Update the edges for merging
+  new_edges = {}
+  for x, dsts in edges.iteritems():
+    new_dsts = set([])
+    for y in dsts:
+      new_dsts.add(canon_node(y))
+    x = canon_node(x)
+    new_edges[x] = new_edges.get(x, set([])).union(new_dsts)
+  edges = new_edges
+
+
+  # output the dot file
+
+  outf = open('foo.dot', 'w')
+  outf.write('digraph {\n')
+
+  for n in nodes:
+    lbl = ga.nodeLabels.get(n, '')[:10]
+    outf.write('  node [shape = circle, label="{1}"] q{0};\n'.format(n, lbl))
+
+  for x, dsts in edges.iteritems():
+    for y in dsts:
+      outf.write('  q{0} -> q{1};\n'.format(x, y))
+
+  outf.write('}\n')
+  outf.close()
+
+
 ####################
 
 addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
@@ -246,4 +373,5 @@ for a in targs:
   else:
     sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
-
+if args.dot_mode:
+  finishDotMode(ga)
