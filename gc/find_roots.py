@@ -50,7 +50,11 @@ parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
                     default=False,
                     help='Experimental dot mode.  Outputs to graph.dot.')
 # Convert dot file to a PDF with 'sfdp -Gsize=67! -Goverlap=prism -Tpdf -O graph.dot'
+# 'neato' works pretty well too, in place of sfdp.
 
+parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='store_true',
+                    default=False,
+                    help='Show edges in dot mode.')
 
 args = parser.parse_args()
 
@@ -284,7 +288,7 @@ def union (m, rep, x, y):
 gPaths = []
 
 
-def finishDotMode(ga):
+def outputDotFile(ga, targs):
 
   # build the set of nodes
   nodes = set([])
@@ -346,6 +350,9 @@ def finishDotMode(ga):
   outf = open('graph.dot', 'w')
   outf.write('digraph {\n')
 
+  if len(targs) != 1:
+    print 'Had more than one target, arbitrarily picking the first one', targs[0]
+
   for n in nodes:
     lbl = ga.nodeLabels.get(n, '')
     if lbl.startswith('Object'):
@@ -353,7 +360,8 @@ def finishDotMode(ga):
       shape = 'square'
       color = 'black'
     elif lbl.startswith('Function'):
-      lbl = lbl[9:]
+      if len(lbl) > 10:
+        lbl = lbl[9:]
       shape = 'ellipse'
       color = 'black'
     elif lbl.startswith('HTML'):
@@ -372,15 +380,46 @@ def finishDotMode(ga):
       shape = 'ellipse'
       color = 'red'
     else:
+      if lbl.startswith('WeakMap'):
+        lbl = 'WeakMap'
+      elif lbl == 'base_shape':
+        lbl = 'shape'
+      elif lbl == 'type_object':
+        lbl = 'type'
+      elif lbl.startswith('DOMRequest '):
+        lbl = 'DOMRequest'
       shape = 'circle'
       color = 'black'
     if lbl.endswith('<no private>'):
       lbl = lbl[:-13]
-    outf.write('  node [color = {3}, shape = {2}, label="{1}"] q{0};\n'.format(n, lbl[:15], shape, color))
+
+    # this will def. not work with multiple targets
+    if n == targs[0]:
+      shape = 'tripleoctagon'
+      lbl = 'TARGET'
+      color = 'orange'
+
+    if shape == 'ellipse':
+      lbl = lbl[:30]
+    else:
+      lbl = lbl[:15]
+
+    outf.write('  node [color = {3}, shape = {2}, label="{1}"] q{0};\n'.format(n, lbl, shape, color))
 
   for x, dsts in edges.iteritems():
     for y in dsts:
-      outf.write('  q{0} -> q{1};\n'.format(x, y))
+      if args.dot_mode_edges:
+        lbls = ga.edgeLabels.get(x, {}).get(y, [])
+        ll = []
+        for l in lbls:
+          if len(l) == 2:
+            l = l[0]
+          if l.startswith('**UNKNOWN SLOT '):
+            continue
+          ll.append(l)
+        outf.write('  q{0} -> q{1} [label="{2}"];\n'.format(x, y, ', '.join(ll)))
+      else:
+        outf.write('  q{0} -> q{1};\n'.format(x, y))
 
   outf.write('}\n')
   outf.close()
@@ -405,4 +444,4 @@ for a in targs:
     sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
 if args.dot_mode:
-  finishDotMode(ga)
+  outputDotFile(ga, targs)
