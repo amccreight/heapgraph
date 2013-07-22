@@ -46,6 +46,11 @@ parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_tr
                     default=False,
                     help='Print paths on a single line and remove addresses to help large-scale analysis of paths.')
 
+parser.add_argument('--num-paths', '-np', type=int, dest='max_num_paths', default=0,
+                    help='Only print out the first so many paths for each target.')
+
+
+### Dot mode arguments.
 parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
                     default=False,
                     help='Experimental dot mode.  Outputs to graph.dot.')
@@ -155,10 +160,17 @@ def add_dot_mode_path(revg, ga, roots, x, path):
 def findRoots (revg, ga, roots, x):
   visited = set([])
   path = []
-  anyFound = [False]
+  numPathsFound = [0]
+
+  if args.max_num_paths == 0:
+    max_paths = None
+  else:
+    max_paths = args.max_num_paths
 
   def findRootsDFS (y):
     if y in visited:
+      return False
+    if max_paths and numPathsFound[0] >= max_paths:
       return False
     visited.add(y)
     if y in roots and (not blackRootsOnly or roots[y]): # roots[y] is true for black roots
@@ -170,7 +182,7 @@ def findRoots (revg, ga, roots, x):
       else:
         print_path(revg, ga, roots, x, path)
       path.reverse()
-      anyFound[0] = True
+      numPathsFound[0] += 1
 
     # Whether or not y is a root, we want to find other paths to y.
     if not y in revg:
@@ -189,7 +201,7 @@ def findRoots (revg, ga, roots, x):
 
   findRootsDFS(x)
 
-  if not anyFound[0]:
+  if numPathsFound[0] == 0:
     print 'No roots found.'
 
 
