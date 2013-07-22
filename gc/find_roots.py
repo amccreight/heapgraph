@@ -46,7 +46,7 @@ parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_tr
                     default=False,
                     help='Print paths on a single line and remove addresses to help large-scale analysis of paths.')
 
-parser.add_argument('--num-paths', '-np', type=int, dest='max_num_paths', default=0,
+parser.add_argument('--num-paths', '-np', type=int, dest='max_num_paths',
                     help='Only print out the first so many paths for each target.')
 
 
@@ -162,26 +162,20 @@ def findRoots (revg, ga, roots, x):
   path = []
   numPathsFound = [0]
 
-  if args.max_num_paths == 0:
-    max_paths = None
-  else:
-    max_paths = args.max_num_paths
-
   def findRootsDFS (y):
     if y in visited:
       return False
-    if max_paths and numPathsFound[0] >= max_paths:
-      return False
     visited.add(y)
     if y in roots and (not blackRootsOnly or roots[y]): # roots[y] is true for black roots
-      path.reverse()
-      if args.simple_path:
-        print_simple_path(revg, ga, roots, x, path)
-      elif args.dot_mode:
-        add_dot_mode_path(revg, ga, roots, x, path)
-      else:
-        print_path(revg, ga, roots, x, path)
-      path.reverse()
+      if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
+        path.reverse()
+        if args.simple_path:
+          print_simple_path(revg, ga, roots, x, path)
+        elif args.dot_mode:
+          add_dot_mode_path(revg, ga, roots, x, path)
+        else:
+          print_path(revg, ga, roots, x, path)
+        path.reverse()
       numPathsFound[0] += 1
 
     # Whether or not y is a root, we want to find other paths to y.
@@ -203,6 +197,10 @@ def findRoots (revg, ga, roots, x):
 
   if numPathsFound[0] == 0:
     print 'No roots found.'
+  elif args.max_num_paths == None or numPathsFound[0] <= args.max_num_paths:
+    print 'Found and displayed', numPathsFound[0], 'paths.'
+  else:
+    print 'Displayed', args.max_num_paths, 'out of', numPathsFound[0], 'total paths found.'
 
 
 def reverseGraph (g):
