@@ -34,7 +34,7 @@ import argparse
 
 # Command line arguments
 
-parser = argparse.ArgumentParser(description='Find a rooting object in the garbage collector graph.')
+parser = argparse.ArgumentParser(description='Find out what is rooting an object in the garbage collector graph.')
 
 parser.add_argument('file_name',
                     help='cycle collector graph file name')
