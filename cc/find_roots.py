@@ -7,7 +7,7 @@
 import sys
 from collections import namedtuple
 import parse_cc_graph
-from optparse import OptionParser
+import argparse
 
 
 # Find the objects that are rooting a particular object (or objects of
@@ -29,29 +29,27 @@ from optparse import OptionParser
 
 # Command line arguments
 
-usage = "usage: %prog [options] file_name target\n\
-  file_name is the name of the cycle collector graph file\n\
-  target is the object(s) to look for\n\
-  target can be an address or a prefix of a object name"
-parser = OptionParser(usage=usage)
+parser = argparse.ArgumentParser(description='Find what is rooting an object in the cycle collector graph.')
 
-parser.add_option("-i", '--ignore-rc-roots', dest='ignore_rc_roots', action='store_true',
-                  default=False,
-                  help='ignore ref counted roots')
+parser.add_argument('file_name',
+                    help='garbage collector graph file name')
 
-parser.add_option("-j", '--ignore-js-roots', dest='ignore_js_roots', action='store_true',
-                  default=False,
-                  help='ignore Javascript roots')
+parser.add_argument('target',
+                    help='address of target object or prefix of class name of targets')
 
-parser.add_option("-n", '--node-name-as-root', dest='node_roots',
-                  metavar='CLASS_NAME',
-                  help='treat nodes with this class name as extra roots')
+parser.add_argument('-i', '--ignore-rc-roots', dest='ignore_rc_roots', action='store_true',
+                    default=False,
+                    help='ignore ref counted roots')
 
-options, args = parser.parse_args()
+parser.add_argument('-j', '--ignore-js-roots', dest='ignore_js_roots', action='store_true',
+                    default=False,
+                    help='ignore Javascript roots')
 
-if len(args) != 2:
-  sys.stderr.write('Expected two arguments.\n')
-  exit(0)
+parser.add_argument('-n', '--node-name-as-root', dest='node_roots',
+                    metavar='CLASS_NAME',
+                    help='treat nodes with this class name as extra roots')
+
+args = parser.parse_args()
 
 
 # print a node description
@@ -177,11 +175,11 @@ def selectRoots(g, ga, res):
   roots = {}
 
   for x in g.keys():
-    if not options.ignore_rc_roots and x in res[0]:
+    if not args.ignore_rc_roots and x in res[0]:
       roots[x] = 'rcRoot'
-    elif not options.ignore_js_roots and ga.gcNodes.get(x, False):
+    elif not args.ignore_js_roots and ga.gcNodes.get(x, False):
       roots[x] = 'gcRoot'
-    elif ga.nodeLabels.get(x, '') == options.node_roots:
+    elif ga.nodeLabels.get(x, '') == args.node_roots:
       roots[x] = 'stopNodeLabel'
 
   return roots
@@ -218,14 +216,12 @@ def selectTargets (g, ga, target):
 
 ####################
 
-file_name = args[0]
-target = args[1]
 
-(g, ga, res) = loadGraph (file_name)
+(g, ga, res) = loadGraph (args.file_name)
 roots = selectRoots(g, ga, res)
 revg = reverseGraph(g)
 
-targs = selectTargets(g, ga, target)
+targs = selectTargets(g, ga, args.target)
 
 for a in targs:
   if a in g:
