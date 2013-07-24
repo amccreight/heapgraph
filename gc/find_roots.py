@@ -53,6 +53,10 @@ parser.add_argument('--print-reverse', '-r', dest='print_reverse', action='store
 parser.add_argument('--num-paths', '-np', type=int, dest='max_num_paths',
                     help='Only print out the first so many paths for each target.')
 
+parser.add_argument('--black-roots-only', '-bro', dest='black_roots_only', action='store_true',
+                    default=False,
+                    help='If this is set, only trace from black roots.  Otherwise, also trace from gray roots.')
+
 
 ### Dot mode arguments.
 parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
@@ -67,9 +71,6 @@ parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='st
 
 args = parser.parse_args()
 
-
-# If this is True, only trace from black roots. Otherwise, also trace from gray roots.
-blackRootsOnly = False
 
 # If this is non-None, use all strings containing this string as the target.
 #stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
@@ -195,7 +196,7 @@ def findRoots (revg, ga, roots, x):
     if y in visited:
       return False
     visited.add(y)
-    if y in roots and (not blackRootsOnly or roots[y]): # roots[y] is true for black roots
+    if y in roots and (not args.black_roots_only or roots[y]): # roots[y] is true for black roots
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
         if args.simple_path:
           if args.print_reverse:
