@@ -29,9 +29,9 @@ stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )<length ([0-9]+
 def analyzeStrings(strings):
   metrics = {}
 
-  for s, count in strings.iteritems():
+  for (l, s), count in strings.iteritems():
     # i is the metric of interest
-    i = count * len(s)
+    i = count * l
     if not i in metrics:
       metrics[i] = []
     metrics[i].append(s)
@@ -67,8 +67,8 @@ def parseGCLogInner(f):
       # 2 is the color
       # 3 is the length
       # 4 is the string itself
-      s = stringMatch.group(4)
-      strings[s] = strings.get(s, 0) + 1
+      desc = (int(stringMatch.group(3)), stringMatch.group(4))
+      strings[desc] = strings.get(desc, 0) + 1
   return strings
 
 def parseGCLog (fname):
