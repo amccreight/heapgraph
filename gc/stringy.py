@@ -9,7 +9,10 @@ from collections import namedtuple
 #
 
 # will need to update this with lengths.
-stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )([^\r\n]*)\r?$')
+stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )<length ([0-9]+)(?: \(truncated\))?> ([^\r\n]*)\r?$')
+
+# old style pattern, without length:
+#stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )([^\r\n]*)\r?$')
 
 
 # What about substrings?  They look like this:
@@ -17,6 +20,11 @@ stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )([^\r\n]*)\r?$'
 #0x55ce0f60 W substring 00:08:9f:0c:9f:b8
 #> 0x55ce0300 W base
 
+
+# Also, ropes, which look like this:
+# 0x444691a0 B string <rope: length 13>
+# > 0x444822a0 B left child
+# > 0x44435920 B right child
 
 def analyzeStrings(strings):
   metrics = {}
@@ -57,8 +65,9 @@ def parseGCLogInner(f):
     if stringMatch:
       # 1 is the address
       # 2 is the color
-      # 3 is the string itself
-      s = stringMatch.group(3)
+      # 3 is the length
+      # 4 is the string itself
+      s = stringMatch.group(4)
       strings[s] = strings.get(s, 0) + 1
   return strings
 
