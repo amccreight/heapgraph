@@ -8,11 +8,8 @@ from collections import namedtuple
 # This script analyzes the strings in a GC dump.
 #
 
-# will need to update this with lengths.
 stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )<length ([0-9]+)(?: \(truncated\))?> ([^\r\n]*)\r?$')
-
-# old style pattern, without length:
-#stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )([^\r\n]*)\r?$')
+oldStringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )([^\r\n]*)\r?$')
 
 
 # What about substrings?  They look like this:
@@ -50,10 +47,11 @@ def analyzeStrings(strings):
       break
     howMany -= 1
     print x[0], '::',
-    if len(x[1]) <= 10:
-      print x[1]
-    else:
-      print 'TOO MANY'
+    print x[1]
+#    if len(x[1]) <= 10:
+#      print x[1]
+#    else:
+#      print 'TOO MANY'
 
 
 # This parses a file f and produces a dict mapping strings to the number of times
@@ -69,6 +67,13 @@ def parseGCLogInner(f):
       # 4 is the string itself
       desc = (int(stringMatch.group(3)), stringMatch.group(4))
       strings[desc] = strings.get(desc, 0) + 1
+    else:
+      stringMatch = oldStringPatt.match(l)
+      if stringMatch:
+        s = stringMatch.group(3)
+        desc = (len(s), s)
+        strings[desc] = strings.get(desc, 0) + 1
+
   return strings
 
 def parseGCLog (fname):
