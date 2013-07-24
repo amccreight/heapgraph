@@ -46,6 +46,10 @@ parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_tr
                     default=False,
                     help='Print paths on a single line and remove addresses to help large-scale analysis of paths.')
 
+parser.add_argument('--print-reverse', '-r', dest='print_reverse', action='store_true',
+                    default=False,
+                    help='Display paths in simple mode going from destination to source, rather than from source to destination.')
+
 parser.add_argument('--num-paths', '-np', type=int, dest='max_num_paths',
                     help='Only print out the first so many paths for each target.')
 
@@ -83,7 +87,11 @@ def print_edge (ga, x, y):
       l = l[0]
     sys.stdout.write(l)
 
-  sys.stdout.write('--')
+  if args.print_reverse:
+    sys.stdout.write('<--')
+  else:
+    sys.stdout.write('--')
+
   lbls = ga.edgeLabels.get(x, {}).get(y, [])
   if len(lbls) != 0:
     sys.stdout.write('[')
@@ -93,7 +101,10 @@ def print_edge (ga, x, y):
       print_edge_label(l)
     sys.stdout.write(']')
 
-  sys.stdout.write('->')
+  if args.print_reverse:
+    sys.stdout.write('--')
+  else:
+    sys.stdout.write('-->')
 
 
 def explain_root (ga, root):
@@ -111,6 +122,7 @@ def print_path (revg, ga, roots, x, path):
     sys.stdout.write('\n    ')
     print_edge(ga, p[0], p[1])
     sys.stdout.write(' ')
+
   print_node(ga, x)
   print
   print
@@ -137,11 +149,28 @@ def print_simple_path (revg, ga, roots, x, path):
 
   for p in path:
     print_simple_node(ga, p[0])
-    sys.stdout.write(', ')
+    sys.stdout.write(' ')
     print_edge(ga, p[0], p[1])
     sys.stdout.write(' ')
   print_simple_node(ga, x)
   print
+
+
+def print_reverse_simple_path (revg, ga, roots, x, path):
+  print_simple_node(ga, x)
+  for p in path:
+    sys.stdout.write(' ')
+    print_edge(ga, p[0], p[1])
+    sys.stdout.write(' ')
+    print_simple_node(ga, p[0])
+
+  sys.stdout.write(' ')
+  if path == []:
+    simple_explain_root(ga, x)
+  else:
+    simple_explain_root(ga, path[-1][0])
+  print
+
 
 
 def add_dot_mode_path(revg, ga, roots, x, path):
@@ -168,14 +197,21 @@ def findRoots (revg, ga, roots, x):
     visited.add(y)
     if y in roots and (not blackRootsOnly or roots[y]): # roots[y] is true for black roots
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
-        path.reverse()
         if args.simple_path:
-          print_simple_path(revg, ga, roots, x, path)
+          if args.print_reverse:
+            print_reverse_simple_path(revg, ga, roots, x, path)
+          else:
+            path.reverse()
+            print_simple_path(revg, ga, roots, x, path)
+            path.reverse()
         elif args.dot_mode:
+          path.reverse()
           add_dot_mode_path(revg, ga, roots, x, path)
+          path.reverse()
         else:
+          path.reverse()
           print_path(revg, ga, roots, x, path)
-        path.reverse()
+          path.reverse()
       numPathsFound[0] += 1
 
     # Whether or not y is a root, we want to find other paths to y.
