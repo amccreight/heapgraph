@@ -43,7 +43,7 @@ from collections import namedtuple
 
 
 
-GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels rcNodes gcNodes xpcRoots purpRoots')
+GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels rcNodes gcNodes xpcRoots purpRoots weakMapEntries')
 
 
 # experimental support for parsing purple roots
@@ -60,6 +60,12 @@ weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+) key=([a-zA-Z0-9]
 
 checkForDoubleLogging = True
 
+def nullToNone(s):
+  if s == '0x0':
+    return None
+  return s
+
+
 # parse CC graph
 def parseGraph (f, rootCounts):
   edges = {}
@@ -67,6 +73,7 @@ def parseGraph (f, rootCounts):
   nodeLabels = {}
   rcNodes = {}
   gcNodes = {}
+  weakMapEntries = []
 
   xpcRoots = set([])
   purpRoots = set([])
@@ -137,14 +144,20 @@ def parseGraph (f, rootCounts):
       # Lines starting with '#' are comments, so ignore them.
       else:
         wmem = weakMapEntryPatt.match(l)
-        # For now, just ignore weak map information.
-        # print 'weak map entry:', (wmem.group(1), wmem.group(2), wmem.group(3), wmem.group(4))
-        if not wmem and l[0] != '#':
+        if wmem:
+          m = nullToNone(wmem.group(1))
+          k = nullToNone(wmem.group(2))
+          kd = nullToNone(wmem.group(3))
+          v = nullToNone(wmem.group(4))
+          assert(v != '0x0')
+          weakMapEntries.append((m, k, kd, v))
+        elif l[0] != '#':
           sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
 
   ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels,
                      rcNodes=rcNodes, gcNodes=gcNodes,
-                     xpcRoots=xpcRoots, purpRoots=purpRoots)
+                     xpcRoots=xpcRoots, purpRoots=purpRoots,
+                     weakMapEntries=weakMapEntries)
   return (edges, ga)
 
 
@@ -284,6 +297,53 @@ def printResults(r):
     sys.stdout.write('{0}, '.format(x))
   print
 
+# XXX This function isn't really right, as you only want to add these edges
+# when you already know that, say, m and k are definitely alive.  I'm not sure
+# how to go about doing that.
+# Add the reversed edges induced by the weak map entries to the graph g.
+# As a bit of a hack, if there's an entry with say map m, key k and value v
+# (ignoring delegates for the moment) then in the reversed graph this sort of acts
+# like there's an edge from v to m and an edge from v to k.  The standard flooding
+# algorithm should produce sensical results from this reversed graph.  Each such reversed
+# "weak" edge includes the name of the other node in the pair, if it is explicitly present.
+def addReversedWeakEdges(g, ga):
+  for (m, k, kd, v) in ga.weakMapEntries:
+    assert(m or k or kd)
+    assert(v)
+
+    # If m and kd are alive, then k is alive.
+    if m and k:
+      g.setdefault(k, set([])).add(m)
+      if kd:
+        delegateName = 'key delegate ' + kd
+      else:
+        delegateName = 'black key delegate'
+      ga.edgeLabels[m].setdefault(k, []).append('weak map along with ' + delegateName)
+
+    if kd and k:
+      g.setdefault(k, set([])).add(kd)
+      if m:
+        mapName = 'weak map ' + m
+      else:
+        mapName = 'black weak map'
+      ga.edgeLabels[kd].setdefault(k, []).append('key delegate along with ' + mapName)
+
+    # If m and k are alive, then v is alive.
+    if m:
+      g.setdefault(v, set([])).add(m)
+      if k:
+        keyName = 'key ' + k
+      else:
+        keyName = 'black key'
+      ga.edgeLabels[m].setdefault(v, []).append('weak map along with ' + keyName)
+
+    if k:
+      g.setdefault(v, set([])).add(k)
+      if m:
+        mapName = 'weak map ' + m
+      else:
+        mapName = 'black weak map'
+      ga.edgeLabels[k].setdefault(v, []).append('key along with ' + mapName)
 
 
 if False:
