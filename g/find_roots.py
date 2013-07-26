@@ -69,7 +69,6 @@ parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='st
                     default=False,
                     help='Show edges in dot mode.')
 
-args = parser.parse_args()
 
 
 # If this is non-None, use all strings containing this string as the target.
@@ -77,12 +76,17 @@ args = parser.parse_args()
 stringTarget = None
 
 
+addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
+
+
+
+
 # print a node description
 def print_node (ga, x):
   sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels[x]))
 
 # print an edge description
-def print_edge (ga, x, y):
+def print_edge (args, ga, x, y):
   def print_edge_label (l):
     if len(l) == 2:
       l = l[0]
@@ -112,7 +116,7 @@ def explain_root (ga, root):
   print "via", ga.rootLabels[root], ":"
 
 # print out the path to an object that has been discovered
-def print_path (revg, ga, roots, x, path):
+def print_path (args, revg, ga, roots, x, path):
   if path == []:
     explain_root(ga, x)
   else:
@@ -121,7 +125,7 @@ def print_path (revg, ga, roots, x, path):
   for p in path:
     print_node(ga, p[0])
     sys.stdout.write('\n    ')
-    print_edge(ga, p[0], p[1])
+    print_edge(args, ga, p[0], p[1])
     sys.stdout.write(' ')
 
   print_node(ga, x)
@@ -142,7 +146,7 @@ def simple_explain_root (ga, root):
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
 # paths.
-def print_simple_path (revg, ga, roots, x, path):
+def print_simple_path (args, revg, ga, roots, x, path):
   if path == []:
     simple_explain_root(ga, x)
   else:
@@ -151,17 +155,17 @@ def print_simple_path (revg, ga, roots, x, path):
   for p in path:
     print_simple_node(ga, p[0])
     sys.stdout.write(' ')
-    print_edge(ga, p[0], p[1])
+    print_edge(args, ga, p[0], p[1])
     sys.stdout.write(' ')
   print_simple_node(ga, x)
   print
 
 
-def print_reverse_simple_path (revg, ga, roots, x, path):
+def print_reverse_simple_path (args, revg, ga, roots, x, path):
   print_simple_node(ga, x)
   for p in path:
     sys.stdout.write(' ')
-    print_edge(ga, p[0], p[1])
+    print_edge(args, ga, p[0], p[1])
     sys.stdout.write(' ')
     print_simple_node(ga, p[0])
 
@@ -187,7 +191,7 @@ def add_dot_mode_path(revg, ga, roots, x, path):
 
 
 # look for roots and print out the paths to the given object
-def findRoots (revg, ga, roots, x):
+def findRoots (args, revg, ga, roots, x):
   visited = set([])
   path = []
   numPathsFound = [0]
@@ -200,10 +204,10 @@ def findRoots (revg, ga, roots, x):
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
         if args.simple_path:
           if args.print_reverse:
-            print_reverse_simple_path(revg, ga, roots, x, path)
+            print_reverse_simple_path(args, revg, ga, roots, x, path)
           else:
             path.reverse()
-            print_simple_path(revg, ga, roots, x, path)
+            print_simple_path(args, revg, ga, roots, x, path)
             path.reverse()
         elif args.dot_mode:
           path.reverse()
@@ -211,7 +215,7 @@ def findRoots (revg, ga, roots, x):
           path.reverse()
         else:
           path.reverse()
-          print_path(revg, ga, roots, x, path)
+          print_path(args, revg, ga, roots, x, path)
           path.reverse()
       numPathsFound[0] += 1
 
@@ -335,7 +339,7 @@ def union (m, rep, x, y):
 gPaths = []
 
 
-def outputDotFile(ga, targs):
+def outputDotFile(args, ga, targs):
 
   # build the set of nodes
   nodes = set([])
@@ -474,21 +478,25 @@ def outputDotFile(ga, targs):
 
 ####################
 
-addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
+
+def findGCRoots():
+  args = parser.parse_args()
+
+  (g, ga) = loadGraph (args.file_name)
+  roots = ga.roots
+  revg = reverseGraph(g)
+
+  targs = selectTargets(g, ga, args.target)
+
+  for a in targs:
+    if a in g:
+      findRoots(args, revg, ga, roots, a)
+    else:
+      sys.stdout.write('{0} is not in the graph.\n'.format(a))
+
+  if args.dot_mode:
+    outputDotFile(args, ga, targs)
 
 
-(g, ga) = loadGraph (args.file_name)
-roots = ga.roots
-revg = reverseGraph(g)
-
-
-targs = selectTargets(g, ga, args.target)
-
-for a in targs:
-  if a in g:
-    findRoots(revg, ga, roots, a)
-  else:
-    sys.stdout.write('{0} is not in the graph.\n'.format(a))
-
-if args.dot_mode:
-  outputDotFile(ga, targs)
+if __name__ == "__main__":
+  findGCRoots()

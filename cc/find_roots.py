@@ -49,8 +49,6 @@ parser.add_argument('-n', '--node-name-as-root', dest='node_roots',
                     metavar='CLASS_NAME',
                     help='treat nodes with this class name as extra roots')
 
-args = parser.parse_args()
-
 
 # print a node description
 def print_node (ga, x):
@@ -171,7 +169,7 @@ def loadGraph(fname):
   return (g, ga, res)
 
 
-def selectRoots(g, ga, res):
+def selectRoots(args, g, ga, res):
   roots = {}
 
   for x in g.keys():
@@ -214,19 +212,21 @@ def selectTargets (g, ga, target):
   return targs
 
 
-####################
+def findCCRoots():
+  args = parser.parse_args()
+
+  (g, ga, res) = loadGraph (args.file_name)
+  roots = selectRoots(args, g, ga, res)
+  revg = reverseGraph(g)
+
+  targs = selectTargets(g, ga, args.target)
+
+  for a in targs:
+    if a in g:
+      findRoots(revg, ga, res[0], roots, a)
+    else:
+      sys.stderr.write('{0} is not in the graph.\n'.format(a))
 
 
-(g, ga, res) = loadGraph (args.file_name)
-roots = selectRoots(g, ga, res)
-revg = reverseGraph(g)
-
-targs = selectTargets(g, ga, args.target)
-
-for a in targs:
-  if a in g:
-    findRoots(revg, ga, res[0], roots, a)
-  else:
-    sys.stderr.write('{0} is not in the graph.\n'.format(a))
-
-
+if __name__ == "__main__":
+  findCCRoots()
