@@ -80,7 +80,7 @@ def parseRoots (f):
     if nm:
       addr = nm.group(1)
       lbl = nm.group(2)
-      
+
       if blackRoot and switchToGreyRoots(lbl):
         blackRoot = False
       roots[addr] = blackRoot

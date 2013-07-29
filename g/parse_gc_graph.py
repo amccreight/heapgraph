@@ -8,38 +8,6 @@
 # Library for parsing garbage collector log files into a graph data structure.
 
 
-# This documentation hasn't been updated.
-
-# parseCCEdgeFile (file_name): given the file name of a CC edge file, parse and
-#   return the data.  This function returns a tuple with two components.
-#
-#   The first component is a multigraph representing the nodes and
-#   edges in the graph.  It is implemented as a dictionary of
-#   dictionaries.  The domain of the outer dictionary is the nodes of
-#   the graphs.  The inner dictionaries map the destinations of the
-#   edges in the graph to the number of times they occur.  For
-#   instance, if there are two edges from x to y in the multigraph g,
-#   then g[x][y] == 2.
-#
-#   The second component contains various graph attributes in a GraphAttribs
-#      - nodeLabels maps node names to their labels, if any
-#      - rcNodes maps ref counted nodes to the number of references
-#        they have
-#      - gcNodes maps gc'd nodes to a boolean, which is True if the
-#        node is marked, False otherwise.
-#      - edgeLabels maps source nodes to dictionaries.  These inner
-#        dictionaries map destination nodes to a list of edge labels.
-
-
-# toSinglegraph (gm): convert a multigraph into a single graph
-
-# reverseMultigraph (gm): reverse a multigraph
-
-# printGraph(g): print out a graph
-
-# pringAttribs(ga): print out graph attributes
-
-
 import sys
 import re
 from collections import namedtuple
