@@ -70,7 +70,7 @@ def parseGraph (f):
       addNode(currNode, isRefCounted, nodeInfo, nm.group(3))
     elif l.startswith('=========='):
       break
-    else:
+    elif not l.startswith('#'):
       print 'Error: Unknown line:', l[:-1]
 
   ga = GraphAttribs (nodeLabels=nodeLabels,
