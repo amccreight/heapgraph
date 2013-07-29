@@ -41,6 +41,10 @@ parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_tr
                     default=False,
                     help='Print paths on a single line and remove addresses to help large-scale analysis of paths.')
 
+parser.add_argument('--print-reverse', '-r', dest='print_reverse', action='store_true',
+                    default=False,
+                    help='Display paths in simple mode going from destination to source, rather than from source to destination.')
+
 parser.add_argument('-i', '--ignore-rc-roots', dest='ignore_rc_roots', action='store_true',
                     default=False,
                     help='ignore ref counted roots')
@@ -65,14 +69,22 @@ def print_edge (args, ga, x, y):
       l = l[0]
     sys.stdout.write(l)
 
-  sys.stdout.write('--[')
+  if args.print_reverse:
+    sys.stdout.write('<--[')
+  else:
+    sys.stdout.write('--[')
+
   lbls = ga.edgeLabels.get(x, {}).get(y, [])
   if len(lbls) != 0:
     print_edge_label(lbls[0])
     for l in lbls[1:]:
       sys.stdout.write(', ')
       print_edge_label(l)
-  sys.stdout.write(']->')
+
+  if args.print_reverse:
+    sys.stdout.write(']--')
+  else:
+    sys.stdout.write(']-->')
 
 
 # explain why a root is a root
@@ -133,6 +145,17 @@ def print_simple_path (args, revg, ga, roots, x, path):
   print
 
 
+
+def print_reverse_simple_path (args, revg, ga, roots, x, path):
+  print_simple_node(ga, x)
+  for p in path:
+    sys.stdout.write(' ')
+    print_edge(args, ga, p[0], p[1])
+    sys.stdout.write(' ')
+    print_simple_node(ga, p[0])
+  print
+
+
 # look for roots and print out the paths to the given object
 def findRoots (args, revg, ga, num_known, roots, x):
   visited = set([])
@@ -145,12 +168,17 @@ def findRoots (args, revg, ga, num_known, roots, x):
     visited.add(y)
 
     if y in roots:
-      path.reverse()
       if args.simple_path:
-        print_simple_path(args, revg, ga, roots, x, path)
+        if args.print_reverse:
+          print_reverse_simple_path(args, revg, ga, roots, x, path)
+        else:
+          path.reverse()
+          print_simple_path(args, revg, ga, roots, x, path)
+          path.reverse()
       else:
+        path.reverse()
         print_path(args, revg, ga, num_known, roots, x, path)
-      path.reverse()
+        path.reverse()
       anyFound[0] = True
     else:
       if not y in revg:
