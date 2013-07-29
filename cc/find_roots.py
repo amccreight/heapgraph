@@ -37,6 +37,10 @@ parser.add_argument('file_name',
 parser.add_argument('target',
                     help='address of target object or prefix of class name of targets')
 
+parser.add_argument('--simple-path', '-sp', dest='simple_path', action='store_true',
+                    default=False,
+                    help='Print paths on a single line and remove addresses to help large-scale analysis of paths.')
+
 parser.add_argument('-i', '--ignore-rc-roots', dest='ignore_rc_roots', action='store_true',
                     default=False,
                     help='ignore ref counted roots')
@@ -55,7 +59,7 @@ def print_node (ga, x):
   sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
 
 # print an edge description
-def print_edge (ga, x, y):
+def print_edge (args, ga, x, y):
   def print_edge_label (l):
     if len(l) == 2:
       l = l[0]
@@ -72,7 +76,7 @@ def print_edge (ga, x, y):
 
 
 # explain why a root is a root
-def explain_root (revg, ga, num_known, roots, root):
+def explain_root (args, revg, ga, num_known, roots, root):
   print '    Root', root,
 
   if roots[root] == 'gcRoot':
@@ -92,28 +96,45 @@ def explain_root (revg, ga, num_known, roots, root):
       print '       ',
       print_node(ga, e)
       print ' ',
-      print_edge(ga, e, root)
+      print_edge(args, ga, e, root)
       sys.stdout.write (' {0}\n'.format(root))
 
 # print out the path to an object that has been discovered
-def print_path (revg, ga, num_known, roots, x, path):
+def print_path (args, revg, ga, num_known, roots, x, path):
   for p in path:
     print_node(ga, p[0])
     sys.stdout.write('\n    ')
-    print_edge(ga, p[0], p[1])
+    print_edge(args, ga, p[0], p[1])
     sys.stdout.write(' ')
   print_node(ga, x)
   print
   print
   if path == []:
-    explain_root(revg, ga, num_known, roots, x)
+    explain_root(args, revg, ga, num_known, roots, x)
   else:
-    explain_root(revg, ga, num_known, roots, path[0][0])
+    explain_root(args, revg, ga, num_known, roots, path[0][0])
+  print
+
+
+
+def print_simple_node (ga, x):
+  sys.stdout.write ('[{0}]'.format(ga.nodeLabels.get(x, '')))
+
+# produce a simplified version of the path, with the intent of
+# eliminating differences that are uninteresting with a large set of
+# paths.
+def print_simple_path (args, revg, ga, roots, x, path):
+  for p in path:
+    print_simple_node(ga, p[0])
+    sys.stdout.write(' ')
+    print_edge(args, ga, p[0], p[1])
+    sys.stdout.write(' ')
+  print_simple_node(ga, x)
   print
 
 
 # look for roots and print out the paths to the given object
-def findRoots (revg, ga, num_known, roots, x):
+def findRoots (args, revg, ga, num_known, roots, x):
   visited = set([])
   path = []
   anyFound = [False]
@@ -125,7 +146,10 @@ def findRoots (revg, ga, num_known, roots, x):
 
     if y in roots:
       path.reverse()
-      print_path(revg, ga, num_known, roots, x, path)
+      if args.simple_path:
+        print_simple_path(args, revg, ga, roots, x, path)
+      else:
+        print_path(args, revg, ga, num_known, roots, x, path)
       path.reverse()
       anyFound[0] = True
     else:
@@ -223,7 +247,7 @@ def findCCRoots():
 
   for a in targs:
     if a in g:
-      findRoots(revg, ga, res[0], roots, a)
+      findRoots(args, revg, ga, res[0], roots, a)
     else:
       sys.stderr.write('{0} is not in the graph.\n'.format(a))
 
