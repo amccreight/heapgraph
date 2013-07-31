@@ -72,8 +72,10 @@ parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='st
 
 
 # If this is non-None, use all strings containing this string as the target.
-#stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
 stringTarget = None
+#stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
+#stringTarget = '<length 9646> data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK'
+#stringTarget='<length 9114> data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbW'
 
 
 addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
@@ -83,7 +85,8 @@ addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
 
 # print a node description
 def print_node (ga, x):
-  sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels[x]))
+  # truncate really long nodeLabels.
+  sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels[x][:50]))
 
 # print an edge description
 def print_edge (args, ga, x, y):
@@ -134,7 +137,10 @@ def print_path (args, revg, ga, roots, x, path):
 
 
 def print_simple_node (ga, x):
-  sys.stdout.write ('[{0}]'.format(ga.nodeLabels[x]))
+  l = ga.nodeLabels[x][:50]
+  if l.endswith(' <no private>'):
+    l = l[:-13]
+  sys.stdout.write ('[{0}]'.format(l))
 
 def simple_explain_root (ga, root):
   # This won't work on Windows.
@@ -269,16 +275,19 @@ def loadGraph(fname):
 
 
 def stringTargets(ga, stringTarget):
+  assert(stringTarget)
+
   targs = []
 
   for addr, lbl in ga.nodeLabels.iteritems():
     if not lbl.startswith('string '):
       continue
     s = lbl[7:]
-    if stringTarget == s:
+    if s.startswith(stringTarget):
     #if stringTarget in s:
       targs.append(addr)
 
+  sys.stderr.write('Found {} string targets starting with {}\n'.format(len(targs), stringTarget))
   return targs
 
 
