@@ -21,8 +21,8 @@ GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels roots rootLabel
 ####  Log parsing
 ####
 
-nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) )?([^\r\n]*)\r?$')
-edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G) )?([^\r\n]*)\r?$')
+nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
+edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 
 # A bit of a hack.  I imagine this could fail in bizarre circumstances.
 
