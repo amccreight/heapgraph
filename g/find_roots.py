@@ -57,6 +57,10 @@ parser.add_argument('--black-roots-only', '-bro', dest='black_roots_only', actio
                     default=False,
                     help='If this is set, only trace from black roots.  Otherwise, also trace from gray roots.')
 
+parser.add_argument('--string-mode', '-sm', dest='string_mode', action='store_true',
+                    default=False,
+                    help='Match any string that has as a prefix the target passed in as the second argument.')
+
 
 ### Dot mode arguments.
 parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
@@ -70,17 +74,7 @@ parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='st
                     help='Show edges in dot mode.')
 
 
-
-# If this is non-None, use all strings containing this string as the target.
-stringTarget = None
-#stringTarget = 'https://marketplace.firefox.com/app/7eccfd71-2765-458d-983f-078580b46a11/manifest.webapp'
-#stringTarget = '<length 9646> data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK'
-#stringTarget='<length 9114> data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbW'
-
-
 addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
-
-
 
 
 # print a node description
@@ -275,8 +269,6 @@ def loadGraph(fname):
 
 
 def stringTargets(ga, stringTarget):
-  assert(stringTarget)
-
   targs = []
 
   for addr, lbl in ga.nodeLabels.iteritems():
@@ -284,23 +276,22 @@ def stringTargets(ga, stringTarget):
       continue
     s = lbl[7:]
     if s.startswith(stringTarget):
-    #if stringTarget in s:
       targs.append(addr)
 
   sys.stderr.write('Found {} string targets starting with {}\n'.format(len(targs), stringTarget))
   return targs
 
 
-def selectTargets (g, ga, target):
-  if stringTarget:
-    targs = stringTargets(ga, stringTarget)
-  elif addrPatt.match(target):
-    targs = [target]
+def selectTargets (args, g, ga):
+  if args.string_mode:
+    targs = stringTargets(ga, args.target)
+  elif addrPatt.match(args.target):
+    targs = [args.target]
   else:
     # look for objects with a class name prefixes, not a particular object
     targs = []
     for x in g.keys():
-      if ga.nodeLabels.get(x, '')[0:len(target)] == target:
+      if ga.nodeLabels.get(x, '')[0:len(args.target)] == args.target:
         targs.append(x)
     if targs == []:
       print 'No matching class names found.'
@@ -495,7 +486,7 @@ def findGCRoots():
   roots = ga.roots
   revg = reverseGraph(g)
 
-  targs = selectTargets(g, ga, args.target)
+  targs = selectTargets(args, g, ga)
 
   for a in targs:
     if a in g:
