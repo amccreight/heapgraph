@@ -29,9 +29,7 @@ def analyzeStrings(strings):
   for (l, s), count in strings.iteritems():
     # i is the metric of interest
     i = count * l
-    if not i in metrics:
-      metrics[i] = []
-    metrics[i].append(s)
+    metrics.setdefault(i, []).append(s)
 
   # probably a better way to listify here...
   l = []
@@ -46,8 +44,10 @@ def analyzeStrings(strings):
     if howMany == 0:
       break
     howMany -= 1
-    print x[0], '::',
-    print x[1]
+    for s in x[1]:
+      print "{} :: {} x '{}'".format(x[0], x[0]/len(s), s)
+
+
 #    if len(x[1]) <= 10:
 #      print x[1]
 #    else:
