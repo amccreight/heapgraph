@@ -23,6 +23,7 @@ oldStringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )([^\r\n]*)\r
 # > 0x444822a0 B left child
 # > 0x44435920 B right child
 
+
 def analyzeStrings(strings):
   metrics = {}
 
@@ -38,14 +39,15 @@ def analyzeStrings(strings):
   l = sorted(l, reverse=True)
 
 
-  print 'total chars :: strings'
+  print 'total chars :: num copies x strings'
   howMany = 20
   for x in l:
     if howMany == 0:
       break
     howMany -= 1
     for s in x[1]:
-      print "{} :: {} x '{}'".format(x[0], x[0]/len(s), s)
+      # Only print out the first 100 chars of the string.
+      print "{} :: {} x '{}'".format(x[0], x[0]/len(s), s[:100])
 
 
 #    if len(x[1]) <= 10:
