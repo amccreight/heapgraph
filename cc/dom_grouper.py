@@ -50,6 +50,7 @@ def print_grouper_results (counts, rootLabels, docParents, docURLs, garb):
   orphan_total = 0
 
   fout = open('counts.log', 'w')
+  sys.stderr.write('Printing grouping results to counts.log\n')
   for x, n in counts.iteritems():
     fout.write('%(num)8d %(label)s' % {'num':n, 'label':x})
     if x in garb:
@@ -88,6 +89,9 @@ def getURL(s):
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(?:rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) (.*)$')
 weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
+
+printMergingInformation = False
+
 
 def parseGraph (f):
   currNode = None
@@ -177,7 +181,7 @@ def parseGraph (f):
   print_grouper_results(counts, rootLabels, docParents, docURLs, garb)
 
   # print out merging information
-  if True:
+  if printMergingInformation:
     for x, l in trees.iteritems():
       print x,
       for y in l:
@@ -284,10 +288,8 @@ def mergeDOMParents (f, trees):
         foundAny = True
         elmCounts += 1
         print y,
-        #sys.stderr.write(y + ' ')
     if foundAny:
       print
-      #sys.stderr.write('\n')
 
 
 def parseFile (fname):
@@ -300,9 +302,10 @@ def parseFile (fname):
   trees = parseGraph(f)
   f.close()
 
-  f = open(fname, 'r')
-  mergeDOMParents(f, trees)
-  f.close()
+  if printMergingInformation:
+    f = open(fname, 'r')
+    mergeDOMParents(f, trees)
+    f.close()
 
 
 if len(sys.argv) < 2:
