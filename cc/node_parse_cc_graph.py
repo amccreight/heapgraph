@@ -22,7 +22,7 @@ GraphAttribs = namedtuple('GraphAttribs', 'nodeLabels rcNodes gcNodes')
 
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) (.*)$')
-weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+) keyDelegate=([a-zA-Z0-9]+) value=([a-zA-Z0-9]+)\r?$')
+weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
 
 # parse CC graph

@@ -56,7 +56,7 @@ fileHasCounts = False
 
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r\n]*)\r?$')
-weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+) key=([a-zA-Z0-9]+) keyDelegate=([a-zA-Z0-9]+) value=([a-zA-Z0-9]+)\r?$')
+weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
 checkForDoubleLogging = True
 
@@ -149,7 +149,7 @@ def parseGraph (f, rootCounts):
           k = nullToNone(wmem.group(2))
           kd = nullToNone(wmem.group(3))
           v = nullToNone(wmem.group(4))
-          assert(v != '0x0')
+          assert(v != '0x0' and v != '(nil)')
           weakMapEntries.append((m, k, kd, v))
         elif l[0] != '#':
           sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
