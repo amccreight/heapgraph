@@ -87,6 +87,7 @@ def getURL(s):
 
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(?:rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) (.*)$')
+weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
 def parseGraph (f):
   currNode = None
@@ -129,8 +130,16 @@ def parseGraph (f):
         doneCurrEdges = False
       elif l == '==========\n':
         break
+      elif l.startswith('#'):
+        # skip comments
+        continue
       else:
-        print 'Error: Unknown line:', l[:-1]
+        wmem = weakMapEntryPatt.match(l)
+        if wmem:
+          # ignore weak map entries
+          continue
+        else:
+          sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
 
   (known, garb) = parse_cc_graph.parseResults(f)
 
@@ -244,8 +253,16 @@ def mergeDOMParents (f, trees):
 
       elif l.startswith('=========='):
         break
+      elif l.startswith('#'):
+        # skip comments
+        continue
       else:
-        print 'Error: Unknown line:', l[:-1]
+        wmem = weakMapEntryPatt.match(l)
+        if wmem:
+          # ignore weak map entries
+          continue
+        else:
+          sys.stderr.write('Error: Unknown line in mergeDOMParents: ' + l[:-1] + '\n')
 
   # print out parent merging information
   for m in parentsOfDOM.values():
@@ -277,7 +294,7 @@ def parseFile (fname):
   try:
     f = open(fname, 'r')
   except:
-    print 'Error opening file', fname
+    sys.stderr.write('Error opening file' + fname + '\n')
     exit(-1)
 
   trees = parseGraph(f)
@@ -289,7 +306,7 @@ def parseFile (fname):
 
 
 if len(sys.argv) < 2:
-  print 'Not enough arguments.'
+  sys.stderr.write('Not enough arguments.\n')
   exit()
 
 parseFile(sys.argv[1])
