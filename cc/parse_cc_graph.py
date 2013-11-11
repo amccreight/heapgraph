@@ -107,8 +107,8 @@ def parseGraph (f, rootCounts):
     if l[0] == '>':
       e = edgePatt.match(l)
       assert(currNode != None)
-      target = e.group(1)
       edgeLabel = e.group(2)
+      target = int(e.group(1), 16)
 
 #    if l[0] == '>':
 #      edge_addr_end = l.index(' ', 2)
@@ -121,7 +121,7 @@ def parseGraph (f, rootCounts):
     else:
       nm = nodePatt.match(l)
       if nm:
-        currNode = nm.group(1)
+        currNode = int(nm.group(1), 16)
         numNodes += 1
         if fileHasCounts:
           if numNodes <= rootCounts[0]:

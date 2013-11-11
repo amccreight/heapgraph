@@ -60,7 +60,7 @@ parser.add_argument('-n', '--node-name-as-root', dest='node_roots',
 
 # print a node description
 def print_node (ga, x):
-  sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
+  sys.stdout.write ('0x{0:x} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
 
 # print an edge description
 def print_edge (args, ga, x, y):
