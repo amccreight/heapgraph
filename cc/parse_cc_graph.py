@@ -79,6 +79,15 @@ def parseGraph (f, rootCounts):
   purpRoots = set([])
   numNodes = 0
 
+  nodeInternmentTable = {}
+  edgeInternmentTable = {}
+
+  def uniquify(table, label):
+    if label in table:
+      return table[label];
+    table[label] = label
+    return label
+
   def addNode (node, isRefCounted, nodeInfo, nodeLabel):
     if checkForDoubleLogging:
       assert(not node in edges)
@@ -107,8 +116,8 @@ def parseGraph (f, rootCounts):
     if l[0] == '>':
       e = edgePatt.match(l)
       assert(currNode != None)
-      edgeLabel = e.group(2)
       target = int(e.group(1), 16)
+      edgeLabel = uniquify(edgeInternmentTable, e.group(2))
 
 #    if l[0] == '>':
 #      edge_addr_end = l.index(' ', 2)
@@ -138,7 +147,7 @@ def parseGraph (f, rootCounts):
         else:
           isRefCounted = True
           nodeInfo = int(nodeTy[3:])
-        addNode(currNode, isRefCounted, nodeInfo, nm.group(3))
+        addNode(currNode, isRefCounted, nodeInfo, uniquify(nodeInternmentTable, nm.group(3)))
       elif l[:10] == '==========':
         break
       # Lines starting with '#' are comments, so ignore them.
