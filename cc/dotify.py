@@ -14,14 +14,14 @@ from optparse import OptionParser
 
 # Parse graph data into a data structure, process it, produce a .dot file.
 
-# This script takes a single argument, which is a digit indicating 
+# This script takes a single argument, which is a digit indicating
 # which cc-edge file should be processed.  It should be invoked from
 # the directory that contains the cc-edges file and pointer_log.
 
 # The dot file can be converted into a .pdf file with
 #    sfdp -Tpdf -O cc-edges-2.dot
 # That will produce a pdf file cc-edges-2.dot.pdf
-# If you trim down to a couple of subgraphs, you can sometimes use twopi or 
+# If you trim down to a couple of subgraphs, you can sometimes use twopi or
 # dot instead of sfdp.
 
 # These options improve the graph:
@@ -328,7 +328,7 @@ def calc_acyc_dfs_rec (g, n, nodes, ng, has_children):
     return True
   nodes.append(n)
   n_has_children = False
-  
+
   if n in g:
     for e in g[n]:
       eacyc = calc_acyc_dfs_rec (g, e, nodes, ng, has_children)
@@ -340,7 +340,7 @@ def calc_acyc_dfs_rec (g, n, nodes, ng, has_children):
   has_children[n] = n_has_children
   nodes.pop()
   return n_has_children
-  
+
 
 def calc_acyc_dfs (g):
   nodes = []
@@ -374,7 +374,7 @@ def calc_acyc_dfs_rec2 (g, n, edges, ng, has_children):
         num_children += 1
         edges.append(e)
 
-  n_edges = set([]) 
+  n_edges = set([])
   for i in range(num_children):
     n_edges |= set([edges.pop()])
   if num_children != 0:
@@ -382,7 +382,7 @@ def calc_acyc_dfs_rec2 (g, n, edges, ng, has_children):
 
   has_children[n] = num_children != 0
   return num_children
-  
+
 
 def calc_acyc_dfs2 (g):
   depth = 0
@@ -405,7 +405,7 @@ def calc_acyc_dfs2 (g):
 def commit_edges (g, edges, n, num_children):
   if num_children == 0:
     return
-  n_edges = set([]) 
+  n_edges = set([])
   for i in range(num_children):
     n_edges |= set([edges.pop()])
   g[n] = n_edges
@@ -419,7 +419,7 @@ def calc_acyc_dfs_rec3 (g, ch, n, edges, ng, has_children):
     return 0
   has_children[n] = True   # temp value to prevent loops
   num_children = 0
-  
+
   if n in g:
     for e in g[n]:
       num_inherit = calc_acyc_dfs_rec3 (g, ch, e, edges, ng, has_children)
@@ -440,7 +440,7 @@ def calc_acyc_dfs_rec3 (g, ch, n, edges, ng, has_children):
 
 
 def one_parent_rc_nodes (g, ga):
-  rc = computeRefCounts(g)  
+  rc = computeRefCounts(g)
   # this computes the ref count from the graph, but we also don't
   # includes roots (which the CC has decided has external refs, so it
   # is a bit circular in terms of reasoning, but should simulate
@@ -493,7 +493,7 @@ def paths_to (g, leak):
         wlen += 1
 
   return remove_nodes(g, graph_nodes(g) - parents)
-  
+
 ####
 #### Union-find with path compression and union by rank
 ####
@@ -589,7 +589,7 @@ def merge_counts(m):
 # I think SCCs are computed as though we can pass through RC nodes,
 # but then we only merge GC nodes.
 
-def merginator(g, ga): 
+def merginator(g, ga):
   # m = calc_js_mini_loop (g, ga)
   m = calc_scc(g, ga)
 
@@ -1136,7 +1136,7 @@ def calc_scc_merge (g, ga):
       if not w in ga.black_gced:
         # add edge to stub node
         newEdges.add(w)
-        
+
     assert(not newv in ng)
     ng[newv] = newEdges
     # if foundRoot:
@@ -1209,7 +1209,7 @@ def split_graph (g):
     gg2 = gg.pop(src2, {})
     gg2[src] = g[src]
     gg[src2] = gg2
-  
+
   return gg.values()
 
 
@@ -1333,7 +1333,7 @@ def analyze_2_graph(x, pair_graphs, ga):
   return True
 
 
-# In a simple loop a -> b, b -> c, c -> a, choose the 
+# In a simple loop a -> b, b -> c, c -> a, choose the
 # the node with the least node_format_string as the first part of the key.
 def pure_cycle_head (nn, ga):
   l = []
@@ -1414,7 +1414,7 @@ def analyze_death_star (g, death_stars, ga):
   death_stars[k] = ds
 
   return True
-      
+
 
 
 
@@ -1598,7 +1598,7 @@ def node_info_string (x, ga):
     return '0' + x + ' [' + ga.node_names[x] + ']'
   else:
     return '0' + x
-  
+
 def edge_name_string (x, y, ga):
   if (x, y) in ga.edge_names:
     return 'via ' + ga.edge_names[(x,y)]
@@ -1621,7 +1621,7 @@ size_counts = {}
 def generic_remover (g, pred, desc):
   nn = set([])
   count = 0
-  
+
   for x in g.keys():
     if pred(x):
       nn.add(x)
@@ -1913,7 +1913,7 @@ def loadGraph(fname):
   sys.stdout.write ('Parsing {0}. '.format(fname))
   sys.stdout.flush()
   (g, ga, res) = parse_cc_graph.parseCCEdgeFile(fname)
-  #sys.stdout.write ('Converting to single graph. ') 
+  #sys.stdout.write ('Converting to single graph. ')
   #sys.stdout.flush()
   g = parse_cc_graph.toSinglegraph(g)
   ga = make_draw_attribs (ga, res)
@@ -2015,13 +2015,3 @@ if options.merge_js:
 
 outf.write('}\n')
 outf.close()
-
-
-
-
-
-
-
-
-
-
