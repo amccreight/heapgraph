@@ -107,7 +107,7 @@ options, args = parser.parse_args()
 
 
 if len(sys.argv) < 2:
-  print 'Not enough arguments.'
+  print 'Not enough arguments.  Run with --help for help.'
   exit()
 
 
