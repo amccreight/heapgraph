@@ -191,8 +191,8 @@ def findRoots (args, revg, ga, num_known, roots, x):
       path.pop()
     return False
 
-  if not x in revg:
-    sys.stdout.write ('No other nodes point to {0}.\n\n'.format(x))
+  if not (x in revg or x in roots):
+    sys.stdout.write ('No other nodes point to {0} and it is not a root.\n\n'.format(x))
     return
 
   findRootsDFS(x)
