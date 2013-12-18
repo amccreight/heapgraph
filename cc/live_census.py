@@ -77,7 +77,8 @@ def analyze_live (nodes, ga, garb):
     else:
       other += n
 
-  print '%(num)8d,other' % {'num':other}
+  if other != 0:
+    print '%(num)8d,other' % {'num':other}
 
 def loadGraph(fname):
   #sys.stdout.write ('Parsing {0}. '.format(fname))
