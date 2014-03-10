@@ -7,6 +7,7 @@
 import sys
 import cc.find_roots
 import g.find_roots
+import os
 
 if len(sys.argv) < 2:
     sys.stderr.write('Expected at least one argument, the edge file name.\n')
@@ -18,9 +19,11 @@ if len(sys.argv) < 2:
 # you must want the CC script.  If the file starts with 'gc', it
 # assumes you must want the GC script.
 
-if sys.argv[1].startswith('cc'):
+baseFileName = os.path.basename(sys.argv[1])
+
+if baseFileName.startswith('cc'):
     cc.find_roots.findCCRoots()
-elif sys.argv[1].startswith('gc'):
+elif baseFileName.startswith('gc'):
     g.find_roots.findGCRoots()
 else:
     sys.stderr.write('Expected log file name to start with cc or gc.\n')
