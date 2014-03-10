@@ -115,12 +115,18 @@ if len(sys.argv) < 2:
 (g, ga) = loadGraph(sys.argv[1])
 m = calc_scc(g)
 
+
+PrintLength = False
+
 for x, l in m.iteritems():
   if len(l) <= 1:
     continue
+  if PrintLength:
+    print '{0:>6}'.format(len(l)),
   print x,
-  for y in l:
-    print y,
+  if not PrintLength:
+    for y in l:
+      print y,
   print
 
 
