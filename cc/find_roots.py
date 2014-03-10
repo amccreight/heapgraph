@@ -57,6 +57,9 @@ parser.add_argument('-n', '--node-name-as-root', dest='node_roots',
                     metavar='CLASS_NAME',
                     help='treat nodes with this class name as extra roots')
 
+parser.add_argument('--print-roots-only', '-ro', dest='print_roots_only', action='store_true',
+                    default=False,
+                    help='Only print out the addresses of rooting objects, to simplify use from other programs.')
 
 # print a node description
 def print_node (ga, x):
@@ -145,7 +148,6 @@ def print_simple_path (args, revg, ga, roots, x, path):
   print
 
 
-
 def print_reverse_simple_path (args, revg, ga, roots, x, path):
   print_simple_node(ga, x)
   for p in path:
@@ -168,7 +170,9 @@ def findRoots (args, revg, ga, num_known, roots, x):
     visited.add(y)
 
     if y in roots:
-      if args.simple_path:
+      if args.print_roots_only:
+        print path[-1][0]
+      elif args.simple_path:
         if args.print_reverse:
           print_reverse_simple_path(args, revg, ga, roots, x, path)
         else:
