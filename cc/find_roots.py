@@ -268,8 +268,9 @@ def selectTargets (g, ga, target):
     if ga.nodeLabels.get(x, '')[0:len(target)] == target:
       targs.append(x)
   if targs == []:
-    sys.stdout.write('Guessing that argument ' + target + ' is an address.\n')
-    targs = [target]
+    sys.stderr.write('Didn\'t find any targets.\n')
+    #sys.stderr.write('Guessing that argument ' + target + ' is an address.\n')
+    #targs = [target]
 
   return targs
 
