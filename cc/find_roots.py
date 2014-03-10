@@ -201,7 +201,7 @@ def findRoots (args, revg, ga, num_known, roots, x):
 
   findRootsDFS(x)
 
-  if not anyFound[0]:
+  if not anyFound[0] and not args.print_roots_only:
     print 'No roots found for', x
 
 
