@@ -158,6 +158,12 @@ def print_reverse_simple_path (args, revg, ga, roots, x, path):
   print
 
 
+def print_roots_only_path(x, path):
+  if len(path) != 0:
+    print path[-1][0]
+  else:
+    print x
+
 # look for roots and print out the paths to the given object
 def findRoots (args, revg, ga, num_known, roots, x):
   visited = set([])
@@ -171,7 +177,7 @@ def findRoots (args, revg, ga, num_known, roots, x):
 
     if y in roots:
       if args.print_roots_only:
-        print path[-1][0]
+        print_roots_only_path(x, path)
       elif args.simple_path:
         if args.print_reverse:
           print_reverse_simple_path(args, revg, ga, roots, x, path)
