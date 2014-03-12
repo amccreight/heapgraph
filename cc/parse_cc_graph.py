@@ -43,7 +43,8 @@ from collections import namedtuple
 
 
 
-GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels rcNodes gcNodes xpcRoots purpRoots weakMapEntries')
+GraphAttribs = namedtuple('GraphAttribs',
+                          'edgeLabels nodeLabels rcNodes gcNodes xpcRoots purpRoots weakMapEntries incrRoots')
 
 
 # experimental support for parsing purple roots
@@ -57,6 +58,8 @@ fileHasCounts = False
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) ([^\r\n]*)\r?$')
 weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
+incrRootPatt = re.compile('IncrementalRoot ([a-zA-Z0-9]+)\r?$')
+
 
 checkForDoubleLogging = True
 
@@ -74,6 +77,7 @@ def parseGraph (f, rootCounts):
   rcNodes = {}
   gcNodes = {}
   weakMapEntries = []
+  incrRoots = set([])
 
   xpcRoots = set([])
   purpRoots = set([])
@@ -151,13 +155,17 @@ def parseGraph (f, rootCounts):
           v = nullToNone(wmem.group(4))
           assert(v != '0x0' and v != '(nil)')
           weakMapEntries.append((m, k, kd, v))
-        elif l[0] != '#':
-          sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
+        else:
+          iroot = incrRootPatt.match(l)
+          if iroot:
+            incrRoots.add(iroot.group(1))
+          elif l[0] != '#':
+            sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
 
   ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels,
                      rcNodes=rcNodes, gcNodes=gcNodes,
                      xpcRoots=xpcRoots, purpRoots=purpRoots,
-                     weakMapEntries=weakMapEntries)
+                     weakMapEntries=weakMapEntries, incrRoots=incrRoots)
   return (edges, ga)
 
 
