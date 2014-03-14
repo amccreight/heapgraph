@@ -96,14 +96,22 @@ def explain_root (args, revg, ga, num_known, roots, root):
 
   if roots[root] == 'gcRoot':
     print 'is a marked GC object.'
+    if root in ga.incrRoots:
+      print '    It is an incremental root, which means it was touched during an incremental CC.'
     return
   elif roots[root] == 'stopNodeLabel':
     print 'is an extra root class.'
     return
 
   assert(roots[root] == 'rcRoot')
-  print 'is a ref counted object with', ga.rcNodes[root] - num_known[root], \
-      'unknown edge(s).'
+
+  if root in num_known:
+    num_unknown = ga.rcNodes[root] - num_known[root]
+  else:
+    assert(root in ga.incrRoots);
+    num_unknown = 0
+
+  print 'is a ref counted object with', num_unknown, 'unknown edge(s).'
 
   if root in revg:
     print '    known edges:'
@@ -113,6 +121,10 @@ def explain_root (args, revg, ga, num_known, roots, root):
       print ' ',
       print_edge(args, ga, e, root)
       sys.stdout.write (' {0}\n'.format(root))
+
+  if root in ga.incrRoots:
+    print '    It is an incremental root, which means it was touched during an incremental CC.'
+
 
 # print out the path to an object that has been discovered
 def print_path (args, revg, ga, num_known, roots, x, path):
@@ -235,9 +247,9 @@ def selectRoots(args, g, ga, res):
   roots = {}
 
   for x in g.keys():
-    if not args.ignore_rc_roots and x in res[0]:
+    if not args.ignore_rc_roots and (x in res[0] or x in ga.incrRoots):
       roots[x] = 'rcRoot'
-    elif not args.ignore_js_roots and ga.gcNodes.get(x, False):
+    elif not args.ignore_js_roots and (ga.gcNodes.get(x, False) or x in ga.incrRoots):
       roots[x] = 'gcRoot'
     elif ga.nodeLabels.get(x, '') == args.node_roots:
       roots[x] = 'stopNodeLabel'

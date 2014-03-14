@@ -1,0 +1,20 @@
+# Also need a case where the incremental root is a GCed thing.
+0x1 [rc=1] otherwise-garbage
+> 0x2 a-field
+#
+0x2 [rc=1] held-by-otherwise-garbage
+> 0x1 back-edge
+#
+0x3 [rc=2] unknown ref
+> 0x4 some-field
+#
+0x4 [rc=1] held-by-unknown-ref
+> 0x5 some-other-field
+#
+0x5 [rc=1] held-by-unknown-ref
+> 0x3 back-edge
+#
+IncrementalRoot 0x1
+IncrementalRoot 0x3
+==========
+0x3 [known=1]
