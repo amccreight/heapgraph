@@ -8,8 +8,8 @@ from collections import namedtuple
 # This script analyzes the strings in a GC dump.
 #
 
-stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )<length ([0-9]+)(?: \(truncated\))?> ([^\r\n]*)\r?$')
-oldStringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G) string )([^\r\n]*)\r?$')
+stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )<length ([0-9]+)(?: \(truncated\))?> ([^\r\n]*)\r?$')
+oldStringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )([^\r\n]*)\r?$')
 
 
 # What about substrings?  They look like this:

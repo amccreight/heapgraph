@@ -45,6 +45,9 @@ starts_with = set (['nsGenericElement (XUL)', \
                       'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
                       'nsXPCWrappedJS', 'JS Object', 'nsDocument', 'XPCWrappedNative'])
 
+# for now, skip this
+starts_with = set([])
+
 
 def canonize_label(l):
 #  return l
