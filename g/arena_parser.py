@@ -118,28 +118,45 @@ def parseArenaFile(fname):
 arenaSize = 4096
 
 
-def analyzeArena(a):
+def analyzeArena(a, out):
     allocKind = a[0]
     thingSize = a[1]
     numThings = a[2]
 
-    totalSize = thingSize * numThings
-    arenaSlop = thingSize % totalSize
-    unusedSpace = arenaSize - totalSize
+    usedSize = thingSize * numThings
+    arenaSlop = thingSize % usedSize
+    unusedSpace = arenaSize - usedSize
 
-    sys.stdout.write('({0},{1}), '.format(unusedSpace, arenaSlop))
+    unusedPerc = (100 * unusedSpace / arenaSize) / 5 * 5
 
+    out[unusedPerc] += 1
 
+    #out.append([100 * unusedSpace / arenaSize, 100 * arenaSlop / arenaSize, 100 * usedSize / arenaSize])
 
 def doStuff():
     zones = parseArenaFile('gc-edges.310.log')
 
+    print 'Number of arenas in each zone with a given percentage of unused space, crudely bucketed.'
+
     # Do some kind of analysis on the zones.
     for z in zones:
         print 'zone:', z[0]
-        print 'comp:', z[1]
+        #print 'comp:', z[1]
+
+        out = []
+        i = 0
+        while i <= 100:
+            out.append(0)
+            i += 1
+
         for a in z[2]:
-            analyzeArena(a)
+            analyzeArena(a, out)
+
+        i = 100
+        while i >= 0:
+            if out[i] > 0:
+                sys.stdout.write('{0}%: {1}, '.format(i, out[i]))
+            i -= 1
         print
 
 
