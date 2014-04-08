@@ -8,6 +8,7 @@ import sys
 from collections import namedtuple
 import parse_cc_graph
 import argparse
+import re
 
 
 # Find the objects that are rooting a particular object (or objects of
@@ -257,10 +258,19 @@ def selectRoots(args, g, ga, res):
   return roots
 
 
+targetDebug = False
+addrPatt = re.compile('[A-F0-9]+$|0x[a-f0-9]+$')
+
+
 def selectTargets (g, ga, target):
-  # won't work on windows if you are searching for an address that starts with anything besides 0
-  if target[0] == '0':
+  if addrPatt.match(target):
+    if targetDebug:
+      print 'Address matched.'
+      exit(0)
     return [target]
+  if targetDebug:
+    print 'No address found in target.'
+    exit(0)
 
   targs = []
 

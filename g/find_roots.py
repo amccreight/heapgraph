@@ -74,8 +74,7 @@ parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='st
                     help='Show edges in dot mode.')
 
 
-addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+$')
-
+addrPatt = re.compile('[A-F0-9]+$|0x[a-f0-9]+$')
 
 
 # print a node description
