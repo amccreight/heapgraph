@@ -91,6 +91,17 @@ def print_edge (args, ga, x, y):
     sys.stdout.write(']-->')
 
 
+def print_known_edges(args, revg, ga, x):
+  if x in revg:
+    print '    known edges:'
+    for e in revg[x]:
+      print '       ',
+      print_node(ga, e)
+      print ' ',
+      print_edge(args, ga, e, x)
+      sys.stdout.write (' {0}\n'.format(x))
+
+
 # explain why a root is a root
 def explain_root (args, revg, ga, num_known, roots, root):
   print '    Root', root,
@@ -114,14 +125,7 @@ def explain_root (args, revg, ga, num_known, roots, root):
 
   print 'is a ref counted object with', num_unknown, 'unknown edge(s).'
 
-  if root in revg:
-    print '    known edges:'
-    for e in revg[root]:
-      print '       ',
-      print_node(ga, e)
-      print ' ',
-      print_edge(args, ga, e, root)
-      sys.stdout.write (' {0}\n'.format(root))
+  print_known_edges(args, revg, ga, root)
 
   if root in ga.incrRoots:
     print '    It is an incremental root, which means it was touched during an incremental CC.'
@@ -222,6 +226,7 @@ def findRoots (args, revg, ga, num_known, roots, x):
 
   if not anyFound[0] and not args.print_roots_only:
     print 'No roots found for', x
+    print_known_edges(args, revg, ga, x)
 
 
 def reverseGraph (g):
