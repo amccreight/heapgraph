@@ -74,7 +74,8 @@ parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='st
                     help='Show edges in dot mode.')
 
 
-addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+')
+addrPatt = re.compile ('(?:0x)?[a-fA-F0-9]+$')
+
 
 
 # print a node description
@@ -282,19 +283,28 @@ def stringTargets(ga, stringTarget):
   return targs
 
 
+targetDebug = False
+
 def selectTargets (args, g, ga):
   if args.string_mode:
     targs = stringTargets(ga, args.target)
   elif addrPatt.match(args.target):
     targs = [args.target]
+    if targetDebug:
+      sys.stderr.write('Looking for object with address {}.\n'.format(args.target))
   else:
     # look for objects with a class name prefixes, not a particular object
     targs = []
     for x in g.keys():
       if ga.nodeLabels.get(x, '')[0:len(args.target)] == args.target:
+        if targetDebug:
+          sys.stderr.write('Found object {}. '.format(x))
         targs.append(x)
     if targs == []:
       print 'No matching class names found.'
+    else:
+      if targetDebug:
+        sys.stderr.write('\n')
 
   return targs
 
