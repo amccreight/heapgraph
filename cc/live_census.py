@@ -84,10 +84,10 @@ def analyze_live (nodes, ga, garb):
     print '%(num)8d,other' % {'num':other}
 
 def loadGraph(fname):
-  #sys.stdout.write ('Parsing {0}. '.format(fname))
-  #sys.stdout.flush()
+  sys.stdout.write ('Parsing {0}. '.format(fname))
+  sys.stdout.flush()
   (g, ga, res) = node_parse_cc_graph.parseCCEdgeFile(fname)
-  #print 'Done loading graph.',
+  print 'Done loading graph.'
 
   return (g, ga, res)
 
@@ -98,5 +98,6 @@ file_name = args[0]
 
 (g, ga, res) = loadGraph (file_name)
 (ke, garb) = res
+
 analyze_live(g, ga, garb)
 
