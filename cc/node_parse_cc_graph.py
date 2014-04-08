@@ -23,6 +23,7 @@ GraphAttribs = namedtuple('GraphAttribs', 'nodeLabels rcNodes gcNodes')
 nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
 edgePatt = re.compile ('> ([a-zA-Z0-9]+) (.*)$')
 weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
+incrRootPatt = re.compile('IncrementalRoot ([a-zA-Z0-9]+)\r?$')
 
 
 # parse CC graph
@@ -75,9 +76,11 @@ def parseGraph (f):
       # skip comments
       continue
     else:
-      wmem = weakMapEntryPatt.match(l)
-      if wmem:
+      if weakMapEntryPatt.match(l):
         # ignore weak map entries
+        continue
+      elif incrRootPatt.match(l):
+        # ignore incremental root entries
         continue
       else:
         sys.stderr.write('Error: skipping unknown line:' + l[:-1] + '\n')
