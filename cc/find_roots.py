@@ -33,7 +33,7 @@ import re
 parser = argparse.ArgumentParser(description='Find what is rooting an object in the cycle collector graph.')
 
 parser.add_argument('file_name',
-                    help='garbage collector graph file name')
+                    help='cycle collector graph file name')
 
 parser.add_argument('target',
                     help='address of target object or prefix of class name of targets')
