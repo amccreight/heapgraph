@@ -28,24 +28,20 @@ parser.add_argument('--dead', dest='dead', action='store_true',
                     help='Analyze dead objects. Not by default.')
 
 parser.add_argument('--min-times', '-mt', dest='min_times', type=int,
-                    default=10,
-                    help='Only show objects that appear at least this many times. Default is 10.')
+                    default=5,
+                    help='Only show objects that appear at least this many times. Default is 5.')
 
 parser.add_argument('--num-show-freq', dest='num_to_show', type=int,
-                    default=10,
-                    help='Only show this many of the most frequent objects. Default is 10.')
+                    default=5,
+                    help='Only show this many of the most frequent objects. Default is 5.')
 
 parser.add_argument('--min-rc', dest='min_rc', type=int,
                     default=0,
-                    help='When analyzing ref counts, only show objects with at least this many.')
+                    help='When analyzing ref counts, only show objects with at least this many. Default is 0.')
 
 parser.add_argument('--num-show-rc', dest='num_rc_to_show', type=int,
-                    default=10,
-                    help='Only show this many of the objects with high ref counts. Default is 10.')
-
-# XXX Add argument for only talking about live objects, dead objects.
-
-
+                    default=5,
+                    help='Only show this many of the objects with high ref counts. Default is 5.')
 
 
 # print a node description
