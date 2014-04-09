@@ -62,6 +62,10 @@ parser.add_argument('--print-roots-only', '-ro', dest='print_roots_only', action
                     default=False,
                     help='Only print out the addresses of rooting objects, to simplify use from other programs.')
 
+parser.add_argument('--output-to-file', dest='output_to_file', action='store_true',
+                    default=False,
+                    help='Print the results to a file. This only works correctly with --print-rooots-only.')
+
 # print a node description
 def print_node (ga, x):
   sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
@@ -175,11 +179,13 @@ def print_reverse_simple_path (args, revg, ga, roots, x, path):
   print
 
 
-def print_roots_only_path(x, path):
+def print_roots_only_path(f, x, path):
   if len(path) != 0:
-    print path[-1][0]
+    f.write(path[-1][0])
   else:
-    print x
+    f.write(x)
+  f.write('\n')
+
 
 # look for roots and print out the paths to the given object
 def findRoots (args, revg, ga, num_known, roots, x):
@@ -194,7 +200,7 @@ def findRoots (args, revg, ga, num_known, roots, x):
 
     if y in roots:
       if args.print_roots_only:
-        print_roots_only_path(x, path)
+        print_roots_only_path(args.output_file, x, path)
       elif args.simple_path:
         if args.print_reverse:
           print_reverse_simple_path(args, revg, ga, roots, x, path)
@@ -311,12 +317,19 @@ def findCCRoots():
 
   targs = selectTargets(g, ga, args.target)
 
+  if args.output_to_file:
+    args.output_file = open(args.file_name + '.out', 'w')
+  else:
+    args.output_file = sys.stdout
+
   for a in targs:
     if a in g:
       findRoots(args, revg, ga, res[0], roots, a)
     else:
       sys.stderr.write('{0} is not in the graph.\n'.format(a))
 
+  if args.output_to_file:
+    args.output_file.close()
 
 if __name__ == "__main__":
   findCCRoots()
