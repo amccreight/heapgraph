@@ -40,6 +40,8 @@ def boring_frames_regexp():
 boring_frames_pattern = re.compile(boring_frames_regexp())
 
 
+fixed_stacks = True
+
 
 def parse_stack_log(f):
     num_traces = 0
@@ -71,7 +73,11 @@ def parse_stack_log(f):
 
         if in_actual_trace:
             assert(l.startswith('   '))
-            fun_name = l[3:l.rfind('[')]
+            if fixed_stacks:
+                fun_name = l[3:-12]
+            else:
+                fun_name = l[3:l.rfind('[')]
+
             if not boring_frames_pattern.match(fun_name):
                 curr_trace.append(fun_name)
             continue
@@ -110,7 +116,16 @@ def parse_stack_file(fname):
     f.close()
 
 
-parse_stack_file('live.txt')
+
+def test():
+    if len(sys.argv) < 2:
+        sys.stderr.write('Not enough arguments.\n')
+        exit()
+
+    parse_stack_file(sys.argv[1])
+
+
+test()
 
 
 
