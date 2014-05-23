@@ -39,6 +39,8 @@ def boring_frames_regexp():
 
 boring_frames_pattern = re.compile(boring_frames_regexp())
 
+bytes_requested_pattern = re.compile(' [0-9,]+ bytes \(([0-9,]+) requested')
+
 
 fixed_stacks = True
 
@@ -54,6 +56,7 @@ def parse_stack_log(f):
     curr_trace = None
 
     traces = {}
+    req_sizes = {}
 
     for l in f:
         if not in_trace:
@@ -93,11 +96,19 @@ def parse_stack_log(f):
             in_actual_trace = True
             continue
 
+        brm = bytes_requested_pattern.match(l)
+        if brm:
+            requested = int(brm.group(1).replace(',',''))
+            for b in blocks:
+                req_sizes[b] = requested
+
     for b, stack in traces.iteritems():
-        print b, ':'
+        print b, ':', req_sizes[b]
         for l in stack:
             print ' ', l[:max_frame_len]
         print
+
+#    print req_sizes
 
     print
     print 'Num traces:', num_traces
@@ -117,7 +128,7 @@ def parse_stack_file(fname):
 
 
 
-def test():
+if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.stderr.write('Not enough arguments.\n')
         exit()
@@ -125,7 +136,6 @@ def test():
     parse_stack_file(sys.argv[1])
 
 
-test()
 
 
 
