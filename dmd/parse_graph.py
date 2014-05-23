@@ -28,6 +28,9 @@ def parse_block_graph(f):
 
         count += 1
 
+    return [block_lens, block_edges]
+
+
 def parse_block_graph_file(fname):
     try:
         f = open(fname, 'r')
@@ -35,8 +38,16 @@ def parse_block_graph_file(fname):
         sys.stderr.write('Error opening file ' + fname + '\n')
         exit(-1)
 
-    parse_block_graph(f)
+    r = parse_block_graph(f)
     f.close()
 
+    return r
 
-parse_block_graph_file('graph.txt')
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.stderr.write('Not enough arguments.\n')
+        exit()
+
+    parse_block_graph_file(sys.argv[1])
+
