@@ -43,6 +43,7 @@ bytes_requested_pattern = re.compile(' [0-9,]+ bytes \(([0-9,]+) requested')
 
 
 fixed_stacks = True
+print_results = False
 
 
 def parse_stack_log(f):
@@ -102,19 +103,20 @@ def parse_stack_log(f):
             for b in blocks:
                 req_sizes[b] = requested
 
-    for b, stack in traces.iteritems():
-        print b, ':', req_sizes[b]
-        for l in stack:
-            print ' ', l[:max_frame_len]
+    if print_results:
+        for b, stack in traces.iteritems():
+            print b, ':', req_sizes[b]
+            for l in stack:
+                print ' ', l[:max_frame_len]
         print
 
-#    print req_sizes
+        print
+        print 'Num traces:', num_traces
 
-    print
-    print 'Num traces:', num_traces
     if incomplete:
         print 'Incomplete traces in file.'
 
+    return [traces, req_sizes]
 
 def parse_stack_file(fname):
     try:
@@ -123,9 +125,9 @@ def parse_stack_file(fname):
         sys.stderr.write('Error opening file ' + fname + '\n')
         exit(-1)
 
-    parse_stack_log(f)
+    r = parse_stack_log(f)
     f.close()
-
+    return r
 
 
 if __name__ == "__main__":
