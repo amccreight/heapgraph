@@ -40,6 +40,10 @@ parser.add_argument('--stack-depth', '-sd', dest='stack_depth', type=int,
                     default=4,
                     help='Number of interesting stack frames to print')
 
+parser.add_argument('--stack-frame-length', '-sfl', dest='stack_frame_length', type=int,
+                    default=150,
+                    help='Number of characters to print from each stack frame')
+
 
 
 ####
@@ -71,7 +75,7 @@ def flood_graph(start, edges):
 
 def print_trace_segment(args, traces, block):
     for l in traces[block][:args.stack_depth]:
-        print ' ', l[:150]
+        print ' ', l[:args.stack_frame_length]
 
 
 def show_flood_graph(args, block_edges, traces, req_sizes, block):
