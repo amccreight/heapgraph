@@ -8,11 +8,40 @@
 # Try to find out something useful about a particular object.
 
 import sys
+import argparse
+
 import parse_graph
 import parse_traces
 
+####
+
+# Command line arguments
+
+parser = argparse.ArgumentParser(description='Analyze the heap graph to find out things about an object.')
+
+parser.add_argument('block_graph_file_name',
+                    help='heap block graph file name')
+
+parser.add_argument('stack_trace_file_name',
+                    help='allocation stack trace file name')
+
+parser.add_argument('block',
+                    help='address of the block of interest')
+
+parser.add_argument('--referrers', dest='referrers', action='store_true',
+                    default=False,
+                    help='Print out information about blocks holding onto the object. (default)')
+
+parser.add_argument('--flood-graph', dest='flood_graph', action='store_true',
+                    default=False,
+                    help='Print out blocks reachable from a particular block.')
 
 
+
+
+
+
+####
 
 def flood_graph(start, edges):
     visited_order = []
@@ -39,24 +68,13 @@ def flood_graph(start, edges):
     return [visited_order, ids]
 
 
-def doStuff():
-    if len(sys.argv) < 4:
-        sys.stderr.write('Not enough arguments.\n')
-        exit()
+def print_trace_segment(traces, block):
+    for l in traces[block][:4]:
+        print ' ', l[:150]
 
-    [block_lens, block_edges] = parse_graph.parse_block_graph_file(sys.argv[1])
-    [traces, req_sizes] = parse_traces.parse_stack_file(sys.argv[2])
 
-    obj = sys.argv[3]
-
-    if not obj in traces:
-        print 'Object', obj, 'not found in traces.'
-
-    if not obj in block_edges:
-        print 'Object', obj, 'not found in edges.'
-        print 'It could still be the target of some nodes.'
-
-    [reachable, ids] = flood_graph(obj, block_edges)
+def show_flood_graph(block_edges, traces, req_sizes, block):
+    [reachable, ids] = flood_graph(block, block_edges)
 
     for r in reachable:
         edge_ids = []
@@ -65,9 +83,9 @@ def doStuff():
         edge_ids = sorted(edge_ids)
 
         print str(ids[r]), 'addr=', r, 'size=', req_sizes[r], ' -->', ', '.join(edge_ids)
-        for l in traces[r][:4]:
-            print ' ', l[:150]
+        print_trace_segment(traces, r)
         print
+
 
 #        for b, stack in traces.iteritems():
 #            print b, ':', req_sizes[b]
@@ -75,7 +93,40 @@ def doStuff():
 #                print ' ', l[:max_frame_len]
 
 
+def show_referrers(block_edges, traces, req_sizes, block):
+    referrers = set([])
+
+    for b, bedges in block_edges.iteritems():
+        if block in bedges:
+            referrers.add(b)
+
+    for r in referrers:
+        print r, 'size =', req_sizes[r]
+        print_trace_segment(traces, r)
+        print
+
+def analyzeLogs():
+    args = parser.parse_args()
+
+    [block_lens, block_edges] = parse_graph.parse_block_graph_file(args.block_graph_file_name)
+    [traces, req_sizes] = parse_traces.parse_stack_file(args.stack_trace_file_name)
+
+    block = args.block
+
+    if not block in traces:
+        print 'Object', block, 'not found in traces.'
+
+    if not block in block_edges:
+        print 'Object', block, 'not found in edges.'
+        print 'It could still be the target of some nodes.'
+
+    if args.flood_graph:
+        show_flood_graph(block_edges, traces, req_sizes, block)
+        return
+
+    show_referrers(block_edges, traces, req_sizes, block)
+
 
 if __name__ == "__main__":
-    doStuff()
+    analyzeLogs()
 
