@@ -36,8 +36,9 @@ parser.add_argument('--flood-graph', dest='flood_graph', action='store_true',
                     default=False,
                     help='Print out blocks reachable from a particular block.')
 
-
-
+parser.add_argument('--stack-depth', '-sd', dest='stack_depth', type=int,
+                    default=4,
+                    help='Number of interesting stack frames to print')
 
 
 
@@ -68,12 +69,12 @@ def flood_graph(start, edges):
     return [visited_order, ids]
 
 
-def print_trace_segment(traces, block):
-    for l in traces[block][:4]:
+def print_trace_segment(args, traces, block):
+    for l in traces[block][:args.stack_depth]:
         print ' ', l[:150]
 
 
-def show_flood_graph(block_edges, traces, req_sizes, block):
+def show_flood_graph(args, block_edges, traces, req_sizes, block):
     [reachable, ids] = flood_graph(block, block_edges)
 
     for r in reachable:
@@ -83,7 +84,7 @@ def show_flood_graph(block_edges, traces, req_sizes, block):
         edge_ids = sorted(edge_ids)
 
         print str(ids[r]), 'addr=', r, 'size=', req_sizes[r], ' -->', ', '.join(edge_ids)
-        print_trace_segment(traces, r)
+        print_trace_segment(args, traces, r)
         print
 
 
@@ -93,7 +94,7 @@ def show_flood_graph(block_edges, traces, req_sizes, block):
 #                print ' ', l[:max_frame_len]
 
 
-def show_referrers(block_edges, traces, req_sizes, block):
+def show_referrers(args, block_edges, traces, req_sizes, block):
     referrers = set([])
 
     for b, bedges in block_edges.iteritems():
@@ -102,7 +103,7 @@ def show_referrers(block_edges, traces, req_sizes, block):
 
     for r in referrers:
         print r, 'size =', req_sizes[r]
-        print_trace_segment(traces, r)
+        print_trace_segment(args, traces, r)
         print
 
 def analyzeLogs():
@@ -121,10 +122,10 @@ def analyzeLogs():
         print 'It could still be the target of some nodes.'
 
     if args.flood_graph:
-        show_flood_graph(block_edges, traces, req_sizes, block)
+        show_flood_graph(args, block_edges, traces, req_sizes, block)
         return
 
-    show_referrers(block_edges, traces, req_sizes, block)
+    show_referrers(args, block_edges, traces, req_sizes, block)
 
 
 if __name__ == "__main__":
