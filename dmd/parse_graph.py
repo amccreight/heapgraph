@@ -43,11 +43,17 @@ def parse_block_graph_file(fname):
 
     return r
 
+def compute_size(r):
+    [block_lens, block_edges] = r
+    total_words = 0
+    for b, e in block_edges.iteritems():
+        total_words += 2 + len(e)
+    print total_words * 8
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.stderr.write('Not enough arguments.\n')
         exit()
 
-    parse_block_graph_file(sys.argv[1])
-
+    r = parse_block_graph_file(sys.argv[1])
+    compute_size(r)
