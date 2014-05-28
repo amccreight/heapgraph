@@ -78,7 +78,9 @@ def parse_stack_log(f):
         if in_actual_trace:
             assert(l.startswith('   '))
             if fixed_stacks:
-                fun_name = l[3:-12]
+                # Remove the leading whitespace, and the trailing
+                # address, in a very fragile way.
+                fun_name = l[3:-11]
             else:
                 fun_name = l[3:l.rfind('[')]
 
