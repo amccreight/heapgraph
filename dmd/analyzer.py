@@ -44,6 +44,10 @@ parser.add_argument('--stack-frame-length', '-sfl', dest='stack_frame_length', t
                     default=150,
                     help='Number of characters to print from each stack frame')
 
+parser.add_argument('--show-position', '-sp', dest='show_position', action='store_true',
+                    default=False,
+                    help='With referrers, show the position of the pointer in the edge list, which may or may not mean anything.')
+
 
 
 ####
@@ -92,28 +96,36 @@ def show_flood_graph(args, block_edges, traces, req_sizes, block):
         print
 
 
-#        for b, stack in traces.iteritems():
-#            print b, ':', req_sizes[b]
-#            for l in stack:
-#                print ' ', l[:max_frame_len]
-
-
 def show_referrers(args, block_edges, traces, req_sizes, block):
-    referrers = set([])
+    if args.show_position:
+        referrers = {}
+    else:
+        referrers = set([])
 
     for b, bedges in block_edges.iteritems():
-        if block in bedges:
-            referrers.add(b)
+        if args.show_position:
+            which_edge = 0
+            for e in bedges:
+                if e == block:
+                    referrers.setdefault(b, []).append(which_edge)
+                which_edge += 1
+
+        else:
+            if block in bedges:
+                referrers.add(b)
 
     for r in referrers:
-        print r, 'size =', req_sizes[r]
+        print r, 'size =', req_sizes[r],
+        if args.show_position:
+            print 'offsets (words) =', (', '.join(str(x) for x in referrers[r])),
+        print
         print_trace_segment(args, traces, r)
         print
 
 def analyzeLogs():
     args = parser.parse_args()
 
-    [block_lens, block_edges] = parse_graph.parse_block_graph_file(args.block_graph_file_name)
+    [block_lens, block_edges] = parse_graph.parse_block_graph_file(args.block_graph_file_name, not args.show_position)
     [traces, req_sizes] = parse_traces.parse_stack_file(args.stack_trace_file_name)
 
     block = args.block

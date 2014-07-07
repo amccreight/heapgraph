@@ -8,7 +8,7 @@
 
 import sys
 
-def parse_block_graph(f):
+def parse_block_graph(f, set_edges):
     count = 0
 
     block_lens = {}
@@ -23,7 +23,10 @@ def parse_block_graph(f):
         block_lens[b] = block_len
 
         assert(not b in block_edges)
-        edges = set(l[2:])
+        if set_edges:
+            edges = set(l[2:])
+        else:
+            edges = l[2:]
         block_edges[b] = edges
 
         count += 1
@@ -31,14 +34,14 @@ def parse_block_graph(f):
     return [block_lens, block_edges]
 
 
-def parse_block_graph_file(fname):
+def parse_block_graph_file(fname, set_edges):
     try:
         f = open(fname, 'r')
     except:
         sys.stderr.write('Error opening file ' + fname + '\n')
         exit(-1)
 
-    r = parse_block_graph(f)
+    r = parse_block_graph(f, set_edges)
     f.close()
 
     return r
@@ -55,5 +58,5 @@ if __name__ == "__main__":
         sys.stderr.write('Not enough arguments.\n')
         exit()
 
-    r = parse_block_graph_file(sys.argv[1])
+    r = parse_block_graph_file(sys.argv[1], True)
     compute_size(r)
