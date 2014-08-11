@@ -97,6 +97,18 @@ def invert_counts_map(counts_map, min_times):
   return [inv_counts_map, inv_domain]
 
 
+def print_inv_counts_map(inv_counts_map, inv_domain, num_to_show):
+  num_printed = 0
+  for count in inv_domain:
+    if num_printed == num_to_show:
+      break
+    for l in inv_counts_map[count]:
+      if num_printed == num_to_show:
+        break
+      num_printed += 1
+      print '%(num)8d %(label)s' % {'num':count, 'label':l}
+
+
 def analyze_nodes(args, nodes, ga, garb):
   # First, figure out which nodes to look at.
   if args.dead:
@@ -134,15 +146,7 @@ def analyze_nodes(args, nodes, ga, garb):
   # Print results.
   print 'Object frequency.'
   print 'Showing no more than', args.num_to_show, 'classes of objects, with at least', args.min_times, 'objects each.'
-  num_printed = 0
-  for n in counts:
-    if num_printed == args.num_to_show:
-      break
-    for l in count_map[n]:
-      if num_printed == args.num_to_show:
-        break
-      num_printed += 1
-      print '%(num)8d %(label)s' % {'num':n, 'label':l}
+  print_inv_counts_map(count_map, counts, args.num_to_show)
   print
 
   print 'Objects with highest ref counts.'
