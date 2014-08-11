@@ -58,9 +58,8 @@ starts_with = set (['nsGenericElement (XUL)', \
                     'nsGenericElement (XBL)', \
                     'nsGenericDOMDataNode', \
                     'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
-                    'JS Object', \
+                    'XPCWrappedNative', \
                     'nsXPCWrappedJS', \
-                    'XPCWrappedNative' \
                     'nsDocument', \
                   ])
 
@@ -70,14 +69,19 @@ starts_with = set (['nsGenericElement (XUL)', \
 
 
 def canonize_label(l):
-#  return l
-
 #  lm = obj_patt.match(l)
 #  if lm:
 #    return lm.group(1)
-  for s in starts_with:
-    if l.startswith(s):
-      return s
+  if l.startswith('JS Object'):
+    if l.startswith('JS Object (Function'):
+      return 'JS Object (Function)'
+    else:
+      return 'JS Object (other)'
+  else:
+    for s in starts_with:
+      if l.startswith(s):
+        return s
+
   return l
 
 # This method takes a map from labels to number of occurences of that label,
