@@ -44,6 +44,9 @@ parser.add_argument('--num-show-rc', dest='num_rc_to_show', type=int,
                     help='Only show this many of the objects with high ref counts. Default is 5.')
 
 
+
+content_parent_alert_threshold = 10
+
 # print a node description
 def print_node (ga, x):
   sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
@@ -62,7 +65,6 @@ starts_with = set (['nsGenericElement (XUL)', \
                     'nsXPCWrappedJS', \
                     'nsDocument', \
                   ])
-
 
 # Skip the merging by uncommenting the next line.
 #starts_with = set([])
@@ -128,6 +130,7 @@ def analyze_nodes(args, nodes, ga, garb):
   nls = {}
   ref_count_map = {}
   js_fn_counts = {}
+  content_parent_count = 0
   for n in nodes_of_interest:
     # Counts by label
     l = ga.nodeLabels[n]
@@ -140,6 +143,9 @@ def analyze_nodes(args, nodes, ga, garb):
         fn_lbl = fn_lbl[3:-1]
       js_fn_counts[fn_lbl] = js_fn_counts.get(fn_lbl, 0) + 1
 
+    if l.startswith('ContentParent'):
+      content_parent_count += 1
+
     l = canonize_label(l)
     nls[l] = nls.get(l, 0) + 1
 
@@ -149,7 +155,6 @@ def analyze_nodes(args, nodes, ga, garb):
       if rc < args.min_rc:
         continue
       ref_count_map.setdefault(rc, []).append(n)
-
 
   # Analyze which counts are most frequent.
   [count_map, counts] = invert_counts_map(nls, args.min_times)
@@ -184,7 +189,11 @@ def analyze_nodes(args, nodes, ga, garb):
         break
       num_printed += 1
       print '  rc=%(num)d %(addr)s %(label)s' % {'num':n, 'addr':x, 'label':ga.nodeLabels[x]}
+  print
 
+  if content_parent_count > content_parent_alert_threshold:
+    print 'ContentParent count seems high. There are', content_parent_count, 'of them.'
+    print
 
 
 #######
