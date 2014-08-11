@@ -56,12 +56,17 @@ obj_patt = re.compile ('(JS Object \([^\)]+\)) \(global=[0-9a-fA-F]*\)')
 #                      'nsXPCWrappedJS', 'JS Object', 'nsDocument', 'XPCWrappedNative'])
 
 starts_with = set (['nsGenericElement (XUL)', \
-                      'nsGenericElement (xhtml) span ', \
-                      'nsGenericElement (xhtml) a ', \
-                      'nsGenericElement (xhtml) input ', \
-                      'nsGenericElement (XBL)', \
-                      'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
-                      'nsXPCWrappedJS', 'JS Object', 'nsDocument', 'XPCWrappedNative'])
+                    'nsGenericElement (xhtml) span ', \
+                    'nsGenericElement (xhtml) a ', \
+                    'nsGenericElement (xhtml) input ', \
+                    'nsGenericElement (XBL)', \
+                    'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
+                    'JS Object', \
+                    'nsXPCWrappedJS', \
+                    'XPCWrappedNative' \
+                    'nsDocument', \
+                  ])
+
 
 # Skip the merging by uncommenting the next line.
 #starts_with = set([])
