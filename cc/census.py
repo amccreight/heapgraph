@@ -60,6 +60,7 @@ starts_with = set (['nsGenericElement (XUL)', \
                     'nsGenericElement (xhtml) a ', \
                     'nsGenericElement (xhtml) input ', \
                     'nsGenericElement (XBL)', \
+                    'nsGenericDOMDataNode', \
                     'nsNodeInfo (XUL)', 'nsNodeInfo (xhtml)', 'nsNodeInfo (XBL)', \
                     'JS Object', \
                     'nsXPCWrappedJS', \
