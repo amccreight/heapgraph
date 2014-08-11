@@ -80,6 +80,21 @@ def canonize_label(l):
       return s
   return l
 
+# This method takes a map from labels to number of occurences of that label,
+# along with the minimum number frequency we care about, and returns the inverse
+# of the map (for the parts of the input map whose range is at least |min_times|)
+# along with an ordered list of the domain of the output map.
+def invert_counts_map(counts_map, min_times):
+  inv_counts_map = {}
+  for l, n in counts_map.iteritems():
+    if n < min_times:
+      continue
+    inv_counts_map.setdefault(n, []).append(l)
+
+  inv_domain = sorted(list(inv_counts_map))
+  inv_domain.reverse()
+
+  return [inv_counts_map, inv_domain]
 
 
 def analyze_nodes(args, nodes, ga, garb):
@@ -111,17 +126,10 @@ def analyze_nodes(args, nodes, ga, garb):
 
 
   # Analyze which counts are most frequent.
-  count_map = {}
-  for l, n in nls.iteritems():
-    if n < args.min_times:
-      continue
-    count_map.setdefault(n, []).append(l)
-  counts = sorted(list(count_map))
-  counts.reverse()
+  [count_map, counts] = invert_counts_map(nls, args.min_times)
 
   ref_counts = sorted(list(ref_count_map))
   ref_counts.reverse()
-
 
   # Print results.
   print 'Object frequency.'
