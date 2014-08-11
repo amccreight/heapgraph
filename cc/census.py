@@ -160,19 +160,19 @@ def analyze_nodes(args, nodes, ga, garb):
 
 
   # Print results.
-  print 'Object frequency.'
+  print 'Object frequency.',
   print 'Showing no more than', args.num_to_show, 'classes of objects, with at least', args.min_times, 'objects each.'
   print_inv_counts_map(count_map, counts, args.num_to_show)
   print
 
-  print 'JS function object frequency'
+  print 'JS function object frequency.',
   print 'Showing no more than', args.num_to_show, 'JS function objects, with at least', args.min_times, 'objects each.'
   print_inv_counts_map(js_fn_map, js_fn_map_dom, args.num_to_show)
   print
 
   [js_fn_map, js_fn_map_dom] = invert_counts_map(js_fn_counts, args.min_times)
 
-  print 'Objects with highest ref counts.'
+  print 'Objects with highest ref counts.',
   print 'Showing no more than', args.num_rc_to_show, 'objects, with ref count of at least', args.min_rc
 
   num_printed = 0
