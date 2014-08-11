@@ -146,7 +146,7 @@ def analyze_nodes(args, nodes, ga, garb):
       if num_printed == args.num_rc_to_show:
         break
       num_printed += 1
-      print 'rc=%(num)d %(addr)s %(label)s' % {'num':n, 'addr':x, 'label':ga.nodeLabels[x]}
+      print '  rc=%(num)d %(addr)s %(label)s' % {'num':n, 'addr':x, 'label':ga.nodeLabels[x]}
 
 
 
