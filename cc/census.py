@@ -123,9 +123,19 @@ def analyze_nodes(args, nodes, ga, garb):
   # Carry out a first pass to gather basic data.
   nls = {}
   ref_count_map = {}
+  js_fn_counts = {}
   for n in nodes_of_interest:
     # Counts by label
     l = ga.nodeLabels[n]
+
+    if l.startswith('JS Object (Function'):
+      fn_lbl = l[19:]
+      if fn_lbl == ')':
+        fn_lbl = '(no name in log)'
+      else:
+        fn_lbl = fn_lbl[3:-1]
+      js_fn_counts[fn_lbl] = js_fn_counts.get(fn_lbl, 0) + 1
+
     l = canonize_label(l)
     nls[l] = nls.get(l, 0) + 1
 
@@ -139,15 +149,24 @@ def analyze_nodes(args, nodes, ga, garb):
 
   # Analyze which counts are most frequent.
   [count_map, counts] = invert_counts_map(nls, args.min_times)
+  [js_fn_map, js_fn_map_dom] = invert_counts_map(js_fn_counts, args.min_times)
 
   ref_counts = sorted(list(ref_count_map))
   ref_counts.reverse()
+
 
   # Print results.
   print 'Object frequency.'
   print 'Showing no more than', args.num_to_show, 'classes of objects, with at least', args.min_times, 'objects each.'
   print_inv_counts_map(count_map, counts, args.num_to_show)
   print
+
+  print 'JS function object frequency'
+  print 'Showing no more than', args.num_to_show, 'JS function objects, with at least', args.min_times, 'objects each.'
+  print_inv_counts_map(js_fn_map, js_fn_map_dom, args.num_to_show)
+  print
+
+  [js_fn_map, js_fn_map_dom] = invert_counts_map(js_fn_counts, args.min_times)
 
   print 'Objects with highest ref counts.'
   print 'Showing no more than', args.num_rc_to_show, 'objects, with ref count of at least', args.min_rc
