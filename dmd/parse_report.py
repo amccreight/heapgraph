@@ -19,8 +19,8 @@ def print_scope(scope, indent=''):
     for subtree in scope[1]:
         print indent + subtree[0]
         print_scope(subtree[1], indent + '  ')
-    if len(indent) == 1:
-        print
+        if len(indent) == 0:
+            print
 
 
 def scope_frame():
