@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# Parse the DMD stack trace log format.
+# Parse the DMD stack trace log format, from prior to bug 1035570, which landed in Firefox 34.
 
 import sys
 import re

@@ -7,7 +7,7 @@
 # Take a diff of two DMD stack records.
 
 import sys
-import parse_b2g2
+from parse_33_report import parse_stack_file
 
 
 def mapify_traces(traces):
@@ -38,8 +38,8 @@ def print_diff_entry(size, data):
 
 
 def diff_logs(f1, f2):
-    m1 = mapify_traces(parse_b2g2.parse_stack_file(f1))
-    m2 = mapify_traces(parse_b2g2.parse_stack_file(f2))
+    m1 = mapify_traces(parse_stack_file(f1))
+    m2 = mapify_traces(parse_stack_file(f2))
 
     new_stuff = {}
 
