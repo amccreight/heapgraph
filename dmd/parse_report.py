@@ -13,14 +13,56 @@ blank_line_patt = re.compile('^\w*$')
 
 trim_print_line_to = 80
 
-def print_scope(scope, indent=''):
-    for header_line in scope[0]:
+
+def tree_apply(tree, f):
+    for header_line in tree[0]:
+        f[0](header_line)
+    for subtree in tree[1]:
+        tree_apply(subtree[1], f[1][subtree[0]])
+
+def tree_map(tree, f):
+    v = f[1]() if f[1] else None
+    l1 = reduce(f[0], tree[0], v)
+    l2 = []
+    for subtree in tree[1]:
+        l2.append((subtree[0], tree_map(subtree[1], f[2][subtree[0]])))
+
+    return (l1, l2)
+
+
+def invocation_splitter(l, s):
+    l.append(s.split(' = '))
+    return l
+
+
+def new_list():
+    return []
+
+def whatever(x, y):
+    return
+
+applier = (None, {'Invocation' : (whatever, None),
+                  'Unreported' : (whatever,
+                                  {'Allocated at' : (whatever, None)})})
+
+mapper = (None, None, {'Invocation' : (invocation_splitter, new_list, None),
+                       'Unreported' : (whatever, None,
+                                       {'Allocated at' : (whatever, None, None)})})
+
+
+
+def print_tree(tree, indent=''):
+    print tree_map(tree, mapper)
+    return
+
+    for header_line in tree[0]:
         print indent + header_line[:trim_print_line_to]
-    for subtree in scope[1]:
+    for subtree in tree[1]:
         print indent + subtree[0]
-        print_scope(subtree[1], indent + '  ')
+        print_tree(subtree[1], indent + '  ')
         if len(indent) == 0:
             print
+
 
 
 def scope_frame():
@@ -80,7 +122,7 @@ if __name__ == "__main__":
         sys.stderr.write('Not enough arguments.\n')
         exit()
 
-    print_scope(parse_stack_file(sys.argv[1]))
+    print_tree(parse_stack_file(sys.argv[1]))
 
 
 
