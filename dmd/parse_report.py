@@ -16,12 +16,6 @@ trim_print_line_to = 80
 
 # Tree folding operations.
 
-def tree_apply(tree, f):
-    for header_line in tree[0]:
-        f[0](header_line)
-    for subtree in tree[1]:
-        tree_apply(subtree[1], f[1][subtree[0]])
-
 def tree_map(tree, f):
     v = f[1]() if f[1] else None
     l1 = reduce(f[0], tree[0], v)
@@ -90,15 +84,47 @@ diff_config = (expect_no_data, None,
 
 
 
-applier = (None, {'Invocation' : (do_nothing, None),
-                  'Unreported' : (do_nothing,
-                                  {'Allocated at' : (do_nothing, None)})})
+
+class ParseTree:
+    def __init__(self):
+        self.data = []
+        self.subtrees = []
+
+    def add_data(self, new_data):
+        self.data.append(new_data)
+
+    def add_subtree(self, tree_name):
+        new_tree = ParseTree()
+        self.subtrees.append((tree_name, new_tree))
+        return new_tree
+
+    def print_tree(self, indent=''):
+        for d in self.data:
+            print indent + d[:trim_print_line_to]
+        for (name, t) in self.subtrees:
+            print indent + name
+            t.print_tree(indent + '  ')
+            if len(indent) == 0:
+                print
+
+    def map_tree(self, config):
+        fold_0 = config[1]() if config[1] else None
+        l1 = reduce(config[0], self.data, fold_0)
+        l2 = []
+        for t in self.subtrees:
+            subtree_fun = config[2].get(t[0], None)
+            if not subtree_fun:
+                continue
+            l2.append((t[0], t[1].map_tree(subtree_fun)))
+
+        return (l1, l2)
+
 
 
 # demangle_tree takes the tree output, and produces a less weird data structure as output,
 # by removing various empty stuff.  it produces output in the form expected by diff.py.
 def demangle_tree(tree):
-    tree = tree_map(tree, diff_config)
+    tree = tree.map_tree(diff_config)
     assert(tree[0] == None)
     tree = tree[1]
 
@@ -120,22 +146,8 @@ def demangle_tree(tree):
     return data
 
 
-def print_tree(tree, indent=''):
-    for header_line in tree[0]:
-        print indent + header_line[:trim_print_line_to]
-    for subtree in tree[1]:
-        print indent + subtree[0]
-        print_tree(subtree[1], indent + '  ')
-        if len(indent) == 0:
-            print
-
-
-
-def scope_frame():
-    return ([], [])
-
 def parse_stack_log(f):
-    outer = scope_frame()
+    outer = ParseTree()
     scopes = [outer]
 
     for l in f:
@@ -146,21 +158,19 @@ def parse_stack_log(f):
         if blank_line_patt.match(l):
             continue
 
-        # Lines ending in '{' start a new section.
+        # Lines ending in '{' start a new subtree.
         if l[-2] == '{':
-            new_section = l[:-2].strip()
-            new_scope = scope_frame()
-            scopes[-1][1].append((new_section, new_scope))
-            scopes.append(new_scope)
+            subtree = scopes[-1].add_subtree(l[:-2].strip())
+            scopes.append(subtree)
             continue
 
-        # Lines ending in '}' end a section.
+        # Lines ending in '}' end a subtree.
         if l[-2] == '}':
             scopes.pop()
             continue
 
         # Other lines are data for the current record.
-        scopes[-1][0].append(l.strip())
+        scopes[-1].add_data(l.strip())
 
     return outer
 
