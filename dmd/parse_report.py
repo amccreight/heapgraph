@@ -9,19 +9,14 @@
 import sys
 import re
 
-blank_line_patt = re.compile('^\w*$')
-
 trim_print_line_to = 80
+
 
 def decomma_number_string(s):
     return int(''.join(s.split(',')))
 
-
 def new_list():
     return []
-
-def expect_no_data(x, y):
-    raise Exception("Did not expect: " + str(y))
 
 def append_frame(l, s):
     l.append(s)
@@ -45,27 +40,39 @@ def trace_header_splitter(l, s):
 
 
 # You can configure the parser by passing in different things for this nested data type.
-# At each level, there is a triple. The first is the function used to process leaf data,
-# which is a fold operation. The second is the function used to generate the initial value
-# for the leaf fold. The third is a dictionary used to process any tree data. The key is
-# the label on the tree node, and the value is another triple describing the desired
-# behavior. If a key is encountered that is not present in the configuration map, that
-# entire subtree will be ignored.
-diff_config = (expect_no_data, None,
+# At each level, there is a triple.
+#
+# The first element of the triple is the function used to process leaf data, which is a
+# fold operation. If this is None, finding any leaf data will throw an exception.
+#
+# The second element of the triple is a function used to generate the initial value
+# for the leaf fold, if the first element isn't None.
+#
+# The third element is a dictionary used to process any subtrees. (If this element is instead
+# None, then finding any subtrees will throw an exception.) The keys are labels on the
+# tree node, and the values are a configuration triple for the subtree. If a key is
+# encountered that is not present in the configuration map, that entire subtree will
+# be ignored.
+diff_config = (None, None,
                {'Unreported' : (trace_header_splitter, new_list,
                                 {'Allocated at' : (append_frame, new_list, None)})})
 
 
 class ParseTree:
     def __init__(self, config):
-        self.data = config[1]() if config[1] else None
+        self.data = config[1]() if config[0] else None
         self.subtrees = []
         self.config = config
 
     def add_data(self, new_data):
+        if not self.config[0]:
+            raise Exception("Did not expect data " + new_data)
         self.data = self.config[0](self.data, new_data)
 
     def add_subtree(self, tree_name):
+        if not self.config[2]:
+            raise Exception("Did not expect any subtrees at all, not even " + tree_name)
+
         subtree_fun = self.config[2].get(tree_name, None)
 
         if not subtree_fun:
@@ -89,6 +96,7 @@ class ParseTree:
 
 # Create a ParseTree from a file.
 def parse_stack_log(f, config):
+    blank_line_patt = re.compile('^\w*$')
     outer = ParseTree(config)
     scopes = [outer]
 
