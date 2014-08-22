@@ -87,8 +87,40 @@ class ParseTree:
                 print
 
 
-# extract_diff_info takes the tree output, and produces a less weird data structure as output,
-# by removing various empty stuff.  It produces output in the form expected by diff.py.
+# Create a ParseTree from a file.
+def parse_stack_log(f, config):
+    outer = ParseTree(config)
+    scopes = [outer]
+
+    for l in f:
+        # Skip comment lines and blank lines.
+        if l.startswith('#'):
+            continue
+
+        if blank_line_patt.match(l):
+            continue
+
+        # Lines ending in '{' start a new subtree.
+        if l[-2] == '{':
+            if scopes[-1]:
+                subtree = scopes[-1].add_subtree(l[:-2].strip())
+            scopes.append(subtree)
+            continue
+
+        # Lines ending in '}' end a subtree.
+        if l[-2] == '}':
+            scopes.pop()
+            continue
+
+        # Other lines are data for the current record.
+        if scopes[-1]:
+            scopes[-1].add_data(l.strip())
+
+    return outer
+
+
+# Remove some fluff from a ParseTree, and do some basic verification.  This produces
+# output in the form expected by diff.py.
 def extract_diff_info(tree):
     assert(tree.data == None)
 
@@ -119,37 +151,6 @@ def extract_diff_info(tree):
         data.append(new_entry)
 
     return data
-
-
-def parse_stack_log(f, config):
-    outer = ParseTree(config)
-    scopes = [outer]
-
-    for l in f:
-        # Skip comment lines and blank lines.
-        if l.startswith('#'):
-            continue
-
-        if blank_line_patt.match(l):
-            continue
-
-        # Lines ending in '{' start a new subtree.
-        if l[-2] == '{':
-            if scopes[-1]:
-                subtree = scopes[-1].add_subtree(l[:-2].strip())
-            scopes.append(subtree)
-            continue
-
-        # Lines ending in '}' end a subtree.
-        if l[-2] == '}':
-            scopes.pop()
-            continue
-
-        # Other lines are data for the current record.
-        if scopes[-1]:
-            scopes[-1].add_data(l.strip())
-
-    return outer
 
 
 def parse_stack_file(fname, config):
