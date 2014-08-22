@@ -13,27 +13,9 @@ blank_line_patt = re.compile('^\w*$')
 
 trim_print_line_to = 80
 
+def decomma_number_string(s):
+    return int(''.join(s.split(',')))
 
-# Tree folding operations.
-
-def tree_map(tree, f):
-    v = f[1]() if f[1] else None
-    l1 = reduce(f[0], tree[0], v)
-    l2 = []
-    for subtree in tree[1]:
-        subtree_fun = f[2].get(subtree[0], None)
-        if not subtree_fun:
-            continue
-        l2.append((subtree[0], tree_map(subtree[1], subtree_fun)))
-
-    return (l1, l2)
-
-
-# Standard tree splitting operations.
-
-def invocation_splitter(l, s):
-    l.append(s.split(' = '))
-    return l
 
 def new_list():
     return []
@@ -41,20 +23,12 @@ def new_list():
 def expect_no_data(x, y):
     raise Exception("Did not expect: " + str(y))
 
-def list_append(l, s):
+def append_frame(l, s):
     l.append(s)
     return l
 
-def do_nothing(x, y):
-    return
-
-def decomma_number_string(s):
-    return int(''.join(s.split(',')))
-
-# Regexps for trace headers.
 first_line_patt = re.compile('\~?(\d+) blocks? in heap block record.*')
 second_line_patt = re.compile('\~?([0-9,]+) bytes \(~?[0-9,]+ requested')
-
 def trace_header_splitter(l, s):
     h = None
     flm = first_line_patt.match(s)
@@ -79,75 +53,76 @@ def trace_header_splitter(l, s):
 # entire subtree will be ignored.
 diff_config = (expect_no_data, None,
                {'Unreported' : (trace_header_splitter, new_list,
-                                {'Allocated at' : (list_append, new_list, None)})})
-# If you want to filter the stack frames somehow, change the |do_nothing| function for 'Allocated at'.
-
-
+                                {'Allocated at' : (append_frame, new_list, None)})})
 
 
 class ParseTree:
-    def __init__(self):
-        self.data = []
+    def __init__(self, config):
+        self.data = config[1]() if config[1] else None
         self.subtrees = []
+        self.config = config
 
     def add_data(self, new_data):
-        self.data.append(new_data)
+        self.data = self.config[0](self.data, new_data)
 
     def add_subtree(self, tree_name):
-        new_tree = ParseTree()
+        subtree_fun = self.config[2].get(tree_name, None)
+
+        if not subtree_fun:
+            # Ignore this subtree.
+            return None
+
+        new_tree = ParseTree(subtree_fun)
         self.subtrees.append((tree_name, new_tree))
         return new_tree
 
     def print_tree(self, indent=''):
-        for d in self.data:
-            print indent + d[:trim_print_line_to]
+        if self.data:
+            for d in self.data:
+                print indent + str(d)[:trim_print_line_to]
         for (name, t) in self.subtrees:
             print indent + name
             t.print_tree(indent + '  ')
             if len(indent) == 0:
                 print
 
-    def map_tree(self, config):
-        fold_0 = config[1]() if config[1] else None
-        l1 = reduce(config[0], self.data, fold_0)
-        l2 = []
-        for t in self.subtrees:
-            subtree_fun = config[2].get(t[0], None)
-            if not subtree_fun:
-                continue
-            l2.append((t[0], t[1].map_tree(subtree_fun)))
 
-        return (l1, l2)
-
-
-
-# demangle_tree takes the tree output, and produces a less weird data structure as output,
-# by removing various empty stuff.  it produces output in the form expected by diff.py.
-def demangle_tree(tree):
-    tree = tree.map_tree(diff_config)
-    assert(tree[0] == None)
-    tree = tree[1]
+# extract_diff_info takes the tree output, and produces a less weird data structure as output,
+# by removing various empty stuff.  It produces output in the form expected by diff.py.
+def extract_diff_info(tree):
+    assert(tree.data == None)
 
     data = []
 
-    for r in tree:
-        entry = r[1]
+    for t in tree.subtrees:
+        assert(t[0] == 'Unreported')
+        t = t[1]
 
-        # This is what you get for creating a Lisp-y data structure.
-        assert(len(entry[0]) == 2)
-        assert(len(entry[1]) == 1)
-        assert(len(entry[1][0]) == 2)
-        assert(len(entry[1][0][1]) == 2)
-        assert(len(entry[1][0][1][1]) == 0)
+        # There should be two entries for 'Unreported', the number of blocks and the number of total bytes.
+        assert(len(t.data) == 2)
+        new_entry = [t.data[0], t.data[1]]
 
-        new_entry = [entry[0][0], entry[0][1], entry[1][0][1][0]]
+        # There should be exactly one subtree, for 'Allocated at'.
+        t = t.subtrees
+        assert(len(t) == 1)
+        t = t[0]
+        assert(len(t) == 2)
+        assert(t[0] == 'Allocated at')
+        t = t[1]
+
+        # The 'Allocated at' subtree should not have any subtrees.
+        assert(len(t.subtrees) == 0)
+
+        # The data of the 'Allocated at' subtree is a list of stack traces.
+        new_entry.append(t.data)
+
         data.append(new_entry)
 
     return data
 
 
-def parse_stack_log(f):
-    outer = ParseTree()
+def parse_stack_log(f, config):
+    outer = ParseTree(config)
     scopes = [outer]
 
     for l in f:
@@ -160,7 +135,8 @@ def parse_stack_log(f):
 
         # Lines ending in '{' start a new subtree.
         if l[-2] == '{':
-            subtree = scopes[-1].add_subtree(l[:-2].strip())
+            if scopes[-1]:
+                subtree = scopes[-1].add_subtree(l[:-2].strip())
             scopes.append(subtree)
             continue
 
@@ -170,25 +146,26 @@ def parse_stack_log(f):
             continue
 
         # Other lines are data for the current record.
-        scopes[-1].add_data(l.strip())
+        if scopes[-1]:
+            scopes[-1].add_data(l.strip())
 
     return outer
 
 
-def parse_stack_file(fname):
+def parse_stack_file(fname, config):
     try:
         f = open(fname, 'r')
     except:
         sys.stderr.write('Error opening file ' + fname + '\n')
         exit(-1)
 
-    r = parse_stack_log(f)
+    r = parse_stack_log(f, config)
     f.close()
     return r
 
 
-def demangle_parse_stack_file(fname):
-    return demangle_tree(parse_stack_file(fname))
+def load_diff_info(fname):
+    return extract_diff_info(parse_stack_file(fname, diff_config))
 
 
 if __name__ == "__main__":
@@ -196,7 +173,7 @@ if __name__ == "__main__":
         sys.stderr.write('Not enough arguments.\n')
         exit()
 
-    demangle_parse_stack_file(sys.argv[1])
+    print load_diff_info(sys.argv[1])
 
 
 

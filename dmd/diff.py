@@ -42,7 +42,7 @@ def print_diff_entry(size, data):
 
 def load_traces(file_name):
     if new_log_format:
-        return parse_report.demangle_parse_stack_file(file_name)
+        return parse_report.load_diff_info(file_name)
     else:
         return parse_33_report.parse_stack_file(file_name)
 
