@@ -10,6 +10,20 @@
 import sys
 import re
 import parse_cc_graph
+import argparse
+
+
+# Argument parsing.
+
+argparser = argparse.ArgumentParser(description='Group together DOM nodes into their topmost parent node by following parent chains.')
+argparser.add_argument('file_name',
+                       help='Cycle collector edge file name.')
+argparser.add_argument('--only-orphans', '-oo', dest='only_orphans', action='store_true',
+                       default=False,
+                       help='Only print out information about orphan nodes')
+
+
+args = argparser.parse_args()
 
 
 # union find with path compression and union by rank
@@ -307,9 +321,5 @@ def parseFile (fname):
     mergeDOMParents(f, trees)
     f.close()
 
-
-if len(sys.argv) < 2:
-  sys.stderr.write('Not enough arguments.\n')
-  exit()
 
 parseFile(sys.argv[1])
