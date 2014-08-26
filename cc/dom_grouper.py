@@ -21,6 +21,9 @@ argparser.add_argument('file_name',
 argparser.add_argument('--only-orphans', '-oo', dest='only_orphans', action='store_true',
                        default=False,
                        help='Only print out information about orphan nodes')
+argparser.add_argument('--no-garbage', '-ng', dest='no_garbage', action='store_true',
+                       default=False,
+                       help='Don\'t print out information about garbage')
 
 
 args = argparser.parse_args()
@@ -66,17 +69,27 @@ def print_grouper_results (counts, rootLabels, docParents, docURLs, garb):
   fout = open('counts.log', 'w')
   sys.stderr.write('Printing grouping results to counts.log\n')
   for x, n in counts.iteritems():
-    fout.write('%(num)8d %(label)s' % {'num':n, 'label':x})
+    print_this = True
+    if args.only_orphans and x in docParents:
+      print_this = False
+    if args.no_garbage and x in garb:
+      print_this = False
+
+    if print_this:
+      fout.write('%(num)8d %(label)s' % {'num':n, 'label':x})
     if x in garb:
       garbage_total += n
-      fout.write(' is garbage')
+      if print_this:
+        fout.write(' is garbage')
     if x in docParents:
       in_doc_total += n
-      fout.write(' in document %(addr)s %(label)s\n' \
+      if print_this:
+        fout.write(' in document %(addr)s %(label)s\n' \
                    % {'addr':docParents[x], 'label':docURLs[docParents[x]]})
     else:
       orphan_total += n
-      fout.write(' orphan from ' + rootLabels[x] + '\n')
+      if print_this:
+        fout.write(' orphan from ' + rootLabels[x] + '\n')
 
   sys.stderr.write('Found %(num)d nodes in orphan DOMs.\n' % {'num':orphan_total})
   sys.stderr.write('Found %(num)d nodes in DOMs in documents.\n' % {'num':in_doc_total})
