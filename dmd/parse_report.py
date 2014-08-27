@@ -9,8 +9,45 @@
 import sys
 import re
 
+# Constants.
+
 trim_print_line_to = 80
 
+
+# Regular expression for frames we don't care to see.
+
+def boring_frames_regexp():
+    boring_frames = ['replace_malloc',
+                     'replace_realloc',
+                     'replace_calloc',
+                     'malloc_zone_malloc',
+                     'malloc_zone_calloc',
+                     'moz_xmalloc',
+                     'moz_xrealloc',
+                     'malloc',
+                     'realloc',
+                     'calloc',
+                     'XPT_ArenaMalloc',
+                     'XPT_DoHeader',
+                     'operator new(unsigned long)',
+                     'XREMain::XRE_main(int, char**, nsXREAppData const*)',
+                     'XRE_main',
+                     'main',
+                     '???']
+
+    escaped_boring_frames = []
+    for f in boring_frames:
+        escaped_boring_frames.append(re.escape(f))
+
+    return '|'.join(escaped_boring_frames)
+
+boring_frames_pattern = re.compile(boring_frames_regexp())
+
+
+
+
+
+# Basic tree transform operations.
 
 def decomma_number_string(s):
     return int(''.join(s.split(',')))
@@ -19,7 +56,10 @@ def new_list():
     return []
 
 def append_frame(l, s):
-    l.append(s)
+    # Remove the trailing address, in a fragile way.
+    s = s[:-11]
+    if not boring_frames_pattern.match(s):
+        l.append(s)
     return l
 
 first_line_patt = re.compile('\~?(\d+) blocks? in heap block record.*')
