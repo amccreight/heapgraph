@@ -126,6 +126,9 @@ def analyzeLogs():
     args = parser.parse_args()
 
     [block_lens, block_edges] = parse_graph.parse_block_graph_file(args.block_graph_file_name, not args.show_position)
+
+    # XXX Make this use parse_report.load_live_graph_info, then generate the two dicts from there.
+    assert False
     [traces, req_sizes] = parse_traces.parse_stack_file(args.stack_trace_file_name)
 
     block = args.block

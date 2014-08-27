@@ -46,6 +46,8 @@ def print_trace_segment(args, traces, block, depth):
 def analyzeLogs():
     args = parser.parse_args()
 
+    # XXX Make this use parse_report.load_live_graph_info, then generate the two dicts from there.
+    assert False
     [traces, req_sizes] = parse_traces.parse_stack_file(args.stack_trace_file_name)
 
     if not args.size:
