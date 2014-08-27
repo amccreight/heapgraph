@@ -11,27 +11,23 @@ import sys
 def parse_block_graph(f, set_edges):
     count = 0
 
-    block_lens = {}
     block_edges = {}
 
     for l in f:
         l = l.split()
         b = l[0]
 
-        assert(not b in block_lens)
-        block_len = int(l[1])
-        block_lens[b] = block_len
-
         assert(not b in block_edges)
         if set_edges:
-            edges = set(l[2:])
+            edges = set(l[1:])
         else:
-            edges = l[2:]
+            edges = l[1:]
+
         block_edges[b] = edges
 
         count += 1
 
-    return [block_lens, block_edges]
+    return block_edges
 
 
 def parse_block_graph_file(fname, set_edges):

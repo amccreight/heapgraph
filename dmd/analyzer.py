@@ -125,7 +125,7 @@ def show_referrers(args, block_edges, traces, req_sizes, block):
 def analyzeLogs():
     args = parser.parse_args()
 
-    [block_lens, block_edges] = parse_graph.parse_block_graph_file(args.block_graph_file_name, not args.show_position)
+    block_edges = parse_graph.parse_block_graph_file(args.block_graph_file_name, not args.show_position)
 
     # XXX Make this use parse_report.load_live_graph_info, then generate the two dicts from there.
     assert False
