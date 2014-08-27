@@ -11,7 +11,7 @@ import sys
 import argparse
 
 import parse_graph
-import parse_traces
+import parse_report
 
 ####
 
@@ -125,11 +125,19 @@ def show_referrers(args, block_edges, traces, req_sizes, block):
 def analyzeLogs():
     args = parser.parse_args()
 
+    # Load the graph and traces files, and get them into a good format.
     block_edges = parse_graph.parse_block_graph_file(args.block_graph_file_name, not args.show_position)
 
-    # XXX Make this use parse_report.load_live_graph_info, then generate the two dicts from there.
-    assert False
-    [traces, req_sizes] = parse_traces.parse_stack_file(args.stack_trace_file_name)
+    raw_traces = parse_report.load_live_graph_info(args.stack_trace_file_name)
+
+    traces = {}
+    req_sizes = {}
+
+    for t in raw_traces:
+        for b in t.blocks:
+            req_sizes[b] = t.req_bytes
+            traces[b] = t.frames
+
 
     block = args.block
 
