@@ -58,6 +58,21 @@ diff_config = (None, None,
                                 {'Allocated at' : (append_frame, new_list, None)})})
 
 
+
+def graph_trace_header_splitter(l, s):
+    if s.startswith('blocks:'):
+        l.append(s.split()[1:])
+    else:
+        slm = second_line_patt.match(s)
+        if slm:
+            l.append(decomma_number_string(slm.group(1)))
+    return l
+
+live_graph_config = (None, None,
+                     {'Live' : (graph_trace_header_splitter, new_list,
+                                {'Allocated at' : (append_frame, new_list, None)})})
+
+
 class ParseTree:
     def __init__(self, config):
         self.data = config[1]() if config[0] else None
@@ -161,6 +176,47 @@ def extract_diff_info(tree):
     return data
 
 
+class LiveGraphTrace:
+    def __init__(self, blocks, reqBytes, frames):
+        self.blocks = blocks
+        self.reqBytes = reqBytes
+        self.frames = frames
+
+# Extract the live graph stack information.
+def extract_live_info(tree):
+    assert(tree.data == None)
+
+    data = []
+
+    for t in tree.subtrees:
+        assert(t[0] == 'Live')
+        t = t[1]
+
+        # There should be two entries for 'Live', the list of blocks and the
+        # total number of bytes.
+        assert(len(t.data) == 2)
+        blocks = t.data[0]
+        reqBytes = t.data[1]
+
+        # There should be exactly one subtree, for 'Allocated at'.
+        t = t.subtrees
+        assert(len(t) == 1)
+        t = t[0]
+        assert(len(t) == 2)
+        assert(t[0] == 'Allocated at')
+        t = t[1]
+
+        # The 'Allocated at' subtree should not have any subtrees.
+        assert(len(t.subtrees) == 0)
+
+        # The data of the 'Allocated at' subtree is a list of stack traces.
+
+        data.append(LiveGraphTrace(blocks, reqBytes, t.data))
+
+    return data
+
+
+
 def parse_stack_file(fname, config):
     try:
         f = open(fname, 'r')
@@ -176,6 +232,8 @@ def parse_stack_file(fname, config):
 def load_diff_info(fname):
     return extract_diff_info(parse_stack_file(fname, diff_config))
 
+def load_live_graph_info(fname):
+    return extract_live_info(parse_stack_file(fname, live_graph_config))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -183,6 +241,7 @@ if __name__ == "__main__":
         exit()
 
     print load_diff_info(sys.argv[1])
+    #print load_live_graph_info(sys.argv[1])[1].frames
 
 
 
