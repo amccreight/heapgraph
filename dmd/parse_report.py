@@ -217,9 +217,9 @@ def extract_diff_info(tree):
 
 
 class LiveGraphTrace:
-    def __init__(self, blocks, reqBytes, frames):
+    def __init__(self, blocks, req_bytes, frames):
         self.blocks = blocks
-        self.reqBytes = reqBytes
+        self.req_bytes = req_bytes
         self.frames = frames
 
 # Extract the live graph stack information.
@@ -236,7 +236,7 @@ def extract_live_info(tree):
         # total number of bytes.
         assert(len(t.data) == 2)
         blocks = t.data[0]
-        reqBytes = t.data[1]
+        req_bytes = t.data[1]
 
         # There should be exactly one subtree, for 'Allocated at'.
         t = t.subtrees
@@ -251,7 +251,7 @@ def extract_live_info(tree):
 
         # The data of the 'Allocated at' subtree is a list of stack traces.
 
-        data.append(LiveGraphTrace(blocks, reqBytes, t.data))
+        data.append(LiveGraphTrace(blocks, req_bytes, t.data))
 
     return data
 
@@ -281,7 +281,7 @@ if __name__ == "__main__":
         exit()
 
     print load_diff_info(sys.argv[1])
-    #print load_live_graph_info(sys.argv[1])[1].frames
+    #print load_live_graph_info(sys.argv[1])[20].frames
 
 
 
