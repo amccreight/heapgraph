@@ -44,7 +44,7 @@ def boring_frames_regexp():
 boring_frames_pattern = re.compile(boring_frames_regexp())
 
 
-
+keep_boring_frames = False
 
 
 # Basic tree transform operations.
@@ -58,7 +58,7 @@ def new_list():
 def append_frame(l, s):
     # Remove the trailing address, in a fragile way.
     s = s[:-11]
-    if not boring_frames_pattern.match(s):
+    if keep_boring_frames or not boring_frames_pattern.match(s):
         l.append(s)
     return l
 
@@ -272,7 +272,8 @@ def parse_stack_file(fname, config):
 def load_diff_info(fname):
     return extract_diff_info(parse_stack_file(fname, diff_config))
 
-def load_live_graph_info(fname):
+def load_live_graph_info(fname, config_keep_boring_frames = False):
+    keep_boring_frames = config_keep_boring_frames
     return extract_live_info(parse_stack_file(fname, live_graph_config))
 
 if __name__ == "__main__":
