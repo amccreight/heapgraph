@@ -56,8 +56,7 @@ def new_list():
     return []
 
 def append_frame(l, s):
-    # Remove the trailing address, in a fragile way.
-    s = s[:-11]
+    # XXX It would be nice to remove the trailing address in a non-fragile way.
     if keep_boring_frames or not boring_frames_pattern.match(s):
         l.append(s)
     return l
