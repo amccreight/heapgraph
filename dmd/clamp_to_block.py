@@ -106,9 +106,23 @@ def get_clamped_address(block_ranges, address):
     return None
 
 
+hit_miss = [0, 0, 0]
+
+
 def clamp_repl(block_ranges, match):
     clamped = get_clamped_address(block_ranges, match.group(0))
-    return clamped if clamped else match.group(0)
+    if clamped:
+        if clamped == match.group(0):
+            #sys.stderr.write('IDENTITY HIT ' + clamped + '\n')
+            hit_miss[2] += 1
+        else:
+            #sys.stderr.write('HIT ' + match.group(0) + ' --> ' + clamped + '\n')
+            hit_miss[0] += 1
+        return clamped
+    else:
+        #sys.stderr.write('MISS ' + match.group(0) + '\n')
+        hit_miss[1] += 1
+        return match.group(0)
 
 
 address_patt = re.compile('0x[0-9a-f]+')
@@ -126,6 +140,8 @@ def clamp_file_addresses(live_file_name, source_file_name):
         print re.sub(address_patt, lambda match: clamp_repl(block_ranges, match), l),
 
     f.close()
+
+    sys.stderr.write('Num hits: ' + str(hit_miss[0]) + '  Num identity hits:' + str(hit_miss[2]) + '  Num misses: ' + str(hit_miss[1]) + '\n')
 
 
 if __name__ == "__main__":
