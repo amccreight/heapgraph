@@ -92,14 +92,14 @@ def get_clamped_address(block_ranges, address):
     address = int(address, 16)
 
     low = 0
-    high = len(block_ranges)
-    while low < high:
-        mid = (low + high) / 2
+    high = len(block_ranges) - 1
+    while low <= high:
+        mid = low + (high - low) / 2
         if address < block_ranges[mid].start:
-            high = mid
+            high = mid - 1
             continue
         if address >= block_ranges[mid].end():
-            low = mid
+            low = mid + 1
             continue
         return block_ranges[mid].block
 
