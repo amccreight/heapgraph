@@ -11,7 +11,8 @@
 
 import sys
 import parse_report
-
+import bisect
+import re
 
 
 def print_frames(frames, indent, num_frames_to_print):
@@ -40,11 +41,13 @@ class AddrRange:
         return self.start + self.length
 
 
-def do_stuff(trace_file_name):
+def load_block_ranges(trace_file_name):
+    sys.stderr.write('Parsing input file. ')
     raw_traces = parse_report.load_live_graph_info(trace_file_name, True)
 
     ranges = []
 
+    sys.stderr.write('Building address range array. ')
     for t in raw_traces:
         for b in t.blocks:
             ranges.append(AddrRange(b, t.req_bytes, t.frames))
@@ -79,16 +82,55 @@ def do_stuff(trace_file_name):
         new_ranges.pop()
         last_overlapped = False
 
-    print 'Removed', len(ranges) - len(new_ranges), 'overlapping blocks, leaving', len(new_ranges)
+    sys.stderr.write('Removed ' + str(len(ranges) - len(new_ranges)) + ' overlapping blocks, leaving ' + str(len(new_ranges)) + '. Done loading.\n')
+
+    return new_ranges
+
+
+# Address is an address as a hex string.
+def get_clamped_address(block_ranges, address):
+    address = int(address, 16)
+
+    low = 0
+    high = len(block_ranges)
+    while low < high:
+        mid = (low + high) / 2
+        if address < block_ranges[mid].start:
+            high = mid
+            continue
+        if address >= block_ranges[mid].end():
+            low = mid
+            continue
+        return block_ranges[mid].block
+
+    return None
+
+
+def clamp_repl(block_ranges, match):
+    clamped = get_clamped_address(block_ranges, match.group(0))
+    return clamped if clamped else match.group(0)
+
+
+address_patt = re.compile('0x[0-9a-f]+')
+
+def clamp_file_addresses(live_file_name, source_file_name):
+    block_ranges = load_block_ranges(live_file_name)
+
+    try:
+        f = open(source_file_name, 'r')
+    except:
+        sys.stderr.write('Error opening file ' + source_file_name + '\n')
+        exit(-1)
+
+    for l in f:
+        print re.sub(address_patt, lambda match: clamp_repl(block_ranges, match), l),
+
+    f.close()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         sys.stderr.write('Not enough arguments.\n')
         exit()
 
-    do_stuff(sys.argv[1])
-
-
-
-
+    clamp_file_addresses(sys.argv[1], sys.argv[2])
