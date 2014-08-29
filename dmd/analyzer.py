@@ -134,9 +134,9 @@ def analyzeLogs():
     req_sizes = {}
 
     for t in raw_traces:
-        for b in t.blocks:
-            req_sizes[b] = t.req_bytes
-            traces[b] = t.frames
+        b = t.block
+        req_sizes[b] = t.req_bytes
+        traces[b] = t.frames
 
 
     block = args.block
