@@ -46,7 +46,7 @@ parser.add_argument('--stack-frame-length', '-sfl', dest='stack_frame_length', t
 
 parser.add_argument('--show-position', '-sp', dest='show_position', action='store_true',
                     default=False,
-                    help='With referrers, show the position of the pointer in the edge list, which may or may not mean anything.')
+                    help='With referrers, show the position of the pointer in the edge list')
 
 
 
@@ -107,7 +107,7 @@ def show_referrers(args, block_edges, traces, req_sizes, block):
             which_edge = 0
             for e in bedges:
                 if e == block:
-                    referrers.setdefault(b, []).append(which_edge)
+                    referrers.setdefault(b, []).append(8 * which_edge)
                 which_edge += 1
 
         else:
@@ -117,7 +117,8 @@ def show_referrers(args, block_edges, traces, req_sizes, block):
     for r in referrers:
         print r, 'size =', req_sizes[r],
         if args.show_position:
-            print 'offsets (words) =', (', '.join(str(x) for x in referrers[r])),
+            plural = 's' if len(referrers[r]) > 1 else ''
+            sys.stdout.write(' at byte offset' + plural + ' ' + (', '.join(str(x) for x in referrers[r])))
         print
         print_trace_segment(args, traces, r)
         print
