@@ -98,17 +98,25 @@ diff_config = (None, None,
 
 
 
-def graph_trace_header_splitter(l, s):
-    if s.startswith('blocks:'):
-        l.append(s.split()[1:])
-    else:
-        slm = second_line_patt.match(s)
-        if slm:
-            l.append(decomma_number_string(slm.group(1)))
-    return l
+blocks_string = 'blocks (requested bytes / slop bytes):'
+
+def new_None():
+    return None
+
+def graph_trace_header_splitter(n, s):
+    if s.startswith(blocks_string):
+        assert n == None
+        block_info = []
+        for x in s[len(blocks_string):].split(')'):
+            if len(x) == 0:
+                continue
+            x = x.split()
+            block_info.append([x[0], int(x[1][1:])])
+        return block_info
+    return n
 
 live_graph_config = (None, None,
-                     {'Live' : (graph_trace_header_splitter, new_list,
+                     {'Live' : (graph_trace_header_splitter, new_None,
                                 {'Allocated at' : (append_frame, new_list, None)})})
 
 
@@ -216,8 +224,8 @@ def extract_diff_info(tree):
 
 
 class LiveGraphTrace:
-    def __init__(self, blocks, req_bytes, frames):
-        self.blocks = blocks
+    def __init__(self, block, req_bytes, frames):
+        self.block = block
         self.req_bytes = req_bytes
         self.frames = frames
 
@@ -231,11 +239,8 @@ def extract_live_info(tree):
         assert(t[0] == 'Live')
         t = t[1]
 
-        # There should be two entries for 'Live', the list of blocks and the
-        # total number of bytes.
-        assert(len(t.data) == 2)
-        blocks = t.data[0]
-        req_bytes = t.data[1]
+        # t.data is a list of block requested-size pairs.
+        blocks_info = t.data
 
         # There should be exactly one subtree, for 'Allocated at'.
         t = t.subtrees
@@ -249,8 +254,9 @@ def extract_live_info(tree):
         assert(len(t.subtrees) == 0)
 
         # The data of the 'Allocated at' subtree is a list of stack traces.
-
-        data.append(LiveGraphTrace(blocks, req_bytes, t.data))
+        # Create a trace for every block.
+        for [b, rb] in blocks_info:
+            data.append(LiveGraphTrace(b, rb, t.data))
 
     return data
 

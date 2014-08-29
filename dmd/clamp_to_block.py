@@ -49,8 +49,7 @@ def load_block_ranges(trace_file_name):
 
     sys.stderr.write('Building address range array. ')
     for t in raw_traces:
-        for b in t.blocks:
-            ranges.append(AddrRange(b, t.req_bytes, t.frames))
+        ranges.append(AddrRange(t.block, t.req_bytes, t.frames))
 
     ranges.sort(key=lambda r: r.start)
 
@@ -83,6 +82,7 @@ def load_block_ranges(trace_file_name):
         last_overlapped = False
 
     sys.stderr.write('Removed ' + str(len(ranges) - len(new_ranges)) + ' overlapping blocks, leaving ' + str(len(new_ranges)) + '. Done loading.\n')
+    assert len(ranges) == len(new_ranges) # Shouldn't have any overlapping blocks.
 
     return new_ranges
 
