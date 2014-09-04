@@ -19,11 +19,11 @@ import parse_report
 
 parser = argparse.ArgumentParser(description='Analyze the heap graph to find out things about an object.')
 
-parser.add_argument('block_graph_file_name',
+parser.add_argument('graph_file_name',
                     help='heap block graph file name')
 
-parser.add_argument('stack_trace_file_name',
-                    help='allocation stack trace file name')
+parser.add_argument('live_stack_trace_file_name',
+                    help='live allocation stack trace file name')
 
 parser.add_argument('block',
                     help='address of the block of interest')
@@ -127,9 +127,9 @@ def analyzeLogs():
     args = parser.parse_args()
 
     # Load the graph and traces files, and get them into a good format.
-    block_edges = parse_graph.parse_block_graph_file(args.block_graph_file_name, not args.show_position)
+    block_edges = parse_graph.parse_block_graph_file(args.graph_file_name, not args.show_position)
 
-    raw_traces = parse_report.load_live_graph_info(args.stack_trace_file_name)
+    raw_traces = parse_report.load_live_graph_info(args.live_stack_trace_file_name)
 
     traces = {}
     req_sizes = {}

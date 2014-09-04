@@ -14,6 +14,10 @@ def parse_block_graph(f, set_edges):
     block_edges = {}
 
     for l in f:
+        if l.startswith('#'):
+            sys.stderr.write('Line starts with #, maybe this is the stack file?\n')
+            exit(-1)
+
         l = l.split()
         b = l[0]
 
