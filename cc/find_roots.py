@@ -70,6 +70,10 @@ parser.add_argument('--weak-maps', dest='weak_maps', action='store_true',
                     default=False,
                     help='Enable experimental weak map support. WARNING: this may not give accurate results.')
 
+parser.add_argument('--weak-maps-maps-live', dest='weak_maps_maps_live', action='store_true',
+                    default=False,
+                    help='Pretend all weak maps are alive. Implies --weak-maps. WARNING: this may not give accurate results.')
+
 
 # print a node description
 def print_node (ga, x):
@@ -315,7 +319,7 @@ def selectTargets (g, ga, target):
 
 def pretendAboutWeakMaps(args, g, ga):
   for (m, k, kd, v) in ga.weakMapEntries:
-    if m:
+    if m and not args.weak_maps_maps_live:
       continue
     if kd:
       continue
@@ -339,7 +343,7 @@ def findCCRoots():
 
   (g, ga, res) = loadGraph (args.file_name)
 
-  if args.weak_maps:
+  if args.weak_maps or args.weak_maps_maps_live:
     pretendAboutWeakMaps(args, g, ga)
 
   roots = selectRoots(args, g, ga, res)
