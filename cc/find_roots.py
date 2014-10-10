@@ -66,6 +66,11 @@ parser.add_argument('--output-to-file', dest='output_to_file', action='store_tru
                     default=False,
                     help='Print the results to a file. This only works correctly with --print-rooots-only.')
 
+parser.add_argument('--weak-maps', dest='weak_maps', action='store_true',
+                    default=False,
+                    help='Enable experimental weak map support. WARNING: this may not give accurate results.')
+
+
 # print a node description
 def print_node (ga, x):
   sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
@@ -308,10 +313,35 @@ def selectTargets (g, ga, target):
   return targs
 
 
+def pretendAboutWeakMaps(args, g, ga):
+  for (m, k, kd, v) in ga.weakMapEntries:
+    if m:
+      continue
+    if kd:
+      continue
+    if not k:
+      continue
+    if not v:
+      continue
+
+    g[k].add(v)
+
+    if m:
+      edgeLabel = 'weak map key-value edge in map ' + m
+    else:
+      edgeLabel = 'weak map key-value edge in black map'
+
+    ga.edgeLabels[k].setdefault(v, []).append(edgeLabel)
+
+
 def findCCRoots():
   args = parser.parse_args()
 
   (g, ga, res) = loadGraph (args.file_name)
+
+  if args.weak_maps:
+    pretendAboutWeakMaps(args, g, ga)
+
   roots = selectRoots(args, g, ga, res)
   revg = reverseGraph(g)
 

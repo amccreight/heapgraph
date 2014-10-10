@@ -166,6 +166,7 @@ def parseGraph (f, rootCounts):
                      rcNodes=rcNodes, gcNodes=gcNodes,
                      xpcRoots=xpcRoots, purpRoots=purpRoots,
                      weakMapEntries=weakMapEntries, incrRoots=incrRoots)
+
   return (edges, ga)
 
 
