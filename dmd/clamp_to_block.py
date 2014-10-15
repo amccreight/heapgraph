@@ -10,50 +10,33 @@
 # a stack trace file.
 
 import sys
-import parse_report
-import bisect
-import re
+import json
 
-
-def print_frames(frames, indent, num_frames_to_print):
-    num_printed = 0
-    for f in frames:
-        print indent, f
-        num_printed += 1
-        if num_printed == num_frames_to_print:
-            break
+# The DMD output version this script handles.
+outputVersion = 1
 
 
 # Start is the address of the first byte of the block, while end is
 # the first byte past the end of the block.
 class AddrRange:
-    def __init__(self, block, length, frames):
+    def __init__(self, block, length):
         self.block = block
         self.start = int(block, 16)
         self.length = length
-        self.frames = frames
-
-    def print_it(self, frames_indent, num_frames_to_print):
-        print self.block, self.start, self.length
-        print_frames(self.frames, frames_indent, num_frames_to_print)
 
     def end(self):
         return self.start + self.length
 
 
-def load_block_ranges(trace_file_name):
-    sys.stderr.write('Parsing input file. ')
-    raw_traces = parse_report.load_live_graph_info(trace_file_name, True)
-
+def load_block_ranges(block_list):
     ranges = []
 
-    sys.stderr.write('Building address range array. ')
-    for t in raw_traces:
-        ranges.append(AddrRange(t.block, t.req_bytes, t.frames))
+    for block in block_list:
+        ranges.append(AddrRange(block['addr'], block['req']))
 
     ranges.sort(key=lambda r: r.start)
 
-    # Remove overlapping blocks.
+    # Make sure there are no overlapping blocks.
     new_ranges = []
     last_overlapped = False
 
@@ -81,14 +64,17 @@ def load_block_ranges(trace_file_name):
         new_ranges.pop()
         last_overlapped = False
 
-    sys.stderr.write('Removed ' + str(len(ranges) - len(new_ranges)) + ' overlapping blocks, leaving ' + str(len(new_ranges)) + '. Done loading.\n')
     assert len(ranges) == len(new_ranges) # Shouldn't have any overlapping blocks.
 
     return new_ranges
 
 
+# Search the block ranges array for a block that address points into.
 # Address is an address as a hex string.
 def get_clamped_address(block_ranges, address):
+    if address == '(nil)':
+        return None
+
     address = int(address, 16)
 
     low = 0
@@ -106,42 +92,72 @@ def get_clamped_address(block_ranges, address):
     return None
 
 
+# An address is either already a pointer to a block,
+# a pointer into a block,
+# or not a pointer to a block.
 hit_miss = [0, 0, 0]
 
 
-def clamp_repl(block_ranges, match):
-    clamped = get_clamped_address(block_ranges, match.group(0))
+def clamp_address(block_ranges, address):
+    clamped = get_clamped_address(block_ranges, address)
     if clamped:
-        if clamped == match.group(0):
-            #sys.stderr.write('IDENTITY HIT ' + clamped + '\n')
-            hit_miss[2] += 1
-        else:
-            #sys.stderr.write('HIT ' + match.group(0) + ' --> ' + clamped + '\n')
+        if clamped == address:
             hit_miss[0] += 1
+        else:
+            hit_miss[1] += 1
         return clamped
     else:
-        #sys.stderr.write('MISS ' + match.group(0) + '\n')
-        hit_miss[1] += 1
-        return match.group(0)
+        hit_miss[2] += 1
+        return '0x0'
 
 
-address_patt = re.compile('0x[0-9a-f]+')
+def clamp_block_contents(block_ranges, block_list):
+    for block in block_list:
+        # Small blocks don't have any contents.
+        if not 'contents' in block:
+            continue
 
-def clamp_file_addresses(live_file_name, source_file_name):
-    block_ranges = load_block_ranges(live_file_name)
+        new_contents = []
+        for address in block['contents']:
+            new_contents.append(clamp_address(block_ranges, address))
 
-    try:
-        f = open(source_file_name, 'r')
-    except:
-        sys.stderr.write('Error opening file ' + source_file_name + '\n')
-        exit(-1)
+        block['contents'] = new_contents
 
-    for l in f:
-        print re.sub(address_patt, lambda match: clamp_repl(block_ranges, match), l),
 
-    f.close()
+    sys.stderr.write('Num hits: ' + str(hit_miss[1]) +
+                     '  Num identity hits: ' + str(hit_miss[0]) +
+                     '  Num misses: ' + str(hit_miss[2]) + '\n')
 
-    sys.stderr.write('Num hits: ' + str(hit_miss[0]) + '  Num identity hits:' + str(hit_miss[2]) + '  Num misses: ' + str(hit_miss[1]) + '\n')
+
+
+def clamp_file_addresses(input_file_name, output_file_name):
+    isZipped = False
+    opener = gzip.open if isZipped else open
+
+    sys.stderr.write('Loading file.\n')
+    with opener(input_file_name, 'rb') as f:
+        j = json.load(f)
+
+    if j['version'] != outputVersion:
+        raise Exception("'version' property isn't '{:d}'".format(outputVersion))
+
+    invocation = j['invocation']
+    sampleBelowSize = invocation['sampleBelowSize']
+    heapIsSampled = sampleBelowSize > 1
+    if heapIsSampled:
+        raise Exception("Heap analysis is not going to work with sampled blocks.")
+
+    block_list = j['blockList']
+
+    sys.stderr.write('Creating block range list.\n')
+    block_ranges = load_block_ranges(block_list)
+
+    sys.stderr.write('Clamping block contents.\n')
+    clamp_block_contents(block_ranges, block_list)
+
+    sys.stderr.write('Saving file.\n')
+    with opener(output_file_name, 'w') as f:
+        json.dump(j, f, sort_keys=True)
 
 
 if __name__ == "__main__":
