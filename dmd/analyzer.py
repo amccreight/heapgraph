@@ -9,21 +9,63 @@
 
 import sys
 import argparse
+import json
+import re
 
-import parse_graph
-import parse_report
+# The DMD output version this script handles.
+outputVersion = 1
+
+# If --ignore-alloc-fns is specified, stack frames containing functions that
+# match these strings will be removed from the *start* of stack traces. (Once
+# we hit a non-matching frame, any subsequent frames won't be removed even if
+# they do match.)
+allocatorFns = [
+    'replace_malloc',
+    'replace_calloc',
+    'replace_realloc',
+    'replace_memalign',
+    'replace_posix_memalign',
+    'moz_xmalloc',
+    'moz_xcalloc',
+    'moz_xrealloc',
+    'operator new(',
+    'operator new[](',
+    'g_malloc',
+    'g_slice_alloc',
+    'callocCanGC',
+    'reallocCanGC',
+    'vpx_malloc',
+    'vpx_calloc',
+    'vpx_realloc',
+    'vpx_memalign',
+    'js_malloc',
+    'js_calloc',
+    'js_realloc',
+    'pod_malloc',
+    'pod_calloc',
+    'pod_realloc',
+    'nsTArrayInfallibleAllocator::Malloc',
+    # This one necessary to fully filter some sequences of allocation functions
+    # that happen in practice. Note that ??? entries that follow non-allocation
+    # functions won't be stripped, as explained above.
+    '???',
+]
 
 ####
 
 # Command line arguments
 
+def range_1_24(string):
+    value = int(string)
+    if value < 1 or value > 24:
+        msg = '{:s} is not in the range 1..24'.format(string)
+        raise argparse.ArgumentTypeError(msg)
+    return value
+
 parser = argparse.ArgumentParser(description='Analyze the heap graph to find out things about an object.')
 
-parser.add_argument('graph_file_name',
-                    help='heap block graph file name')
-
-parser.add_argument('live_stack_trace_file_name',
-                    help='live allocation stack trace file name')
+parser.add_argument('file_name',
+                    help='clamped DMD log file name')
 
 parser.add_argument('block',
                     help='address of the block of interest')
@@ -32,25 +74,40 @@ parser.add_argument('--referrers', dest='referrers', action='store_true',
                     default=False,
                     help='Print out information about blocks holding onto the object. (default)')
 
-parser.add_argument('--flood-graph', dest='flood_graph', action='store_true',
-                    default=False,
-                    help='Print out blocks reachable from a particular block.')
+# XXX not updated yet
+#parser.add_argument('--flood-graph', dest='flood_graph', action='store_true',
+#                    default=False,
+#                    help='Print out blocks reachable from a particular block.')
 
-parser.add_argument('--stack-depth', '-sd', dest='stack_depth', type=int,
-                    default=4,
-                    help='Number of interesting stack frames to print')
-
-parser.add_argument('--stack-frame-length', '-sfl', dest='stack_frame_length', type=int,
+parser.add_argument('--stack-frame-length', '-sfl', type=int,
                     default=150,
                     help='Number of characters to print from each stack frame')
 
-parser.add_argument('--show-position', '-sp', dest='show_position', action='store_true',
-                    default=False,
-                    help='With referrers, show the position of the pointer in the edge list')
+parser.add_argument('-a', '--ignore-alloc-fns', action='store_true',
+                    help='ignore allocation functions at the start of traces')
 
-
+parser.add_argument('-f', '--max-frames', type=range_1_24,
+                    help='maximum number of frames to consider in each trace')
 
 ####
+
+
+class BlockData:
+    def __init__(self, json_block):
+        self.addr = json_block['addr']
+
+        if 'contents' in json_block:
+            contents = json_block['contents']
+        else:
+            contents = []
+        self.contents = []
+        for c in contents:
+            self.contents.append(int(c, 16))
+
+        self.req_size = json_block['req']
+
+        self.alloc_stack = json_block['alloc']
+
 
 def flood_graph(start, edges):
     visited_order = []
@@ -77,9 +134,11 @@ def flood_graph(start, edges):
     return [visited_order, ids]
 
 
-def print_trace_segment(args, traces, block):
-    for l in traces[block][:args.stack_depth]:
-        print ' ', l[:args.stack_frame_length]
+def print_trace_segment(args, stacks, block):
+    (traceTable, frameTable) = stacks
+
+    for l in traceTable[block.alloc_stack]:
+        print ' ', frameTable[l][5:args.stack_frame_length]
 
 
 def show_flood_graph(args, block_edges, traces, req_sizes, block):
@@ -96,64 +155,95 @@ def show_flood_graph(args, block_edges, traces, req_sizes, block):
         print
 
 
-def show_referrers(args, block_edges, traces, req_sizes, block):
-    if args.show_position:
-        referrers = {}
-    else:
-        referrers = set([])
+def show_referrers(args, blocks, stacks, block):
+    referrers = {}
 
-    for b, bedges in block_edges.iteritems():
-        if args.show_position:
-            which_edge = 0
-            for e in bedges:
-                if e == block:
-                    referrers.setdefault(b, []).append(8 * which_edge)
-                which_edge += 1
-
-        else:
-            if block in bedges:
-                referrers.add(b)
+    for b, data in blocks.iteritems():
+        which_edge = 0
+        for e in data.contents:
+            if e == block:
+                referrers.setdefault(b, []).append(8 * which_edge)
+            which_edge += 1
 
     for r in referrers:
-        print r, 'size =', req_sizes[r],
-        if args.show_position:
-            plural = 's' if len(referrers[r]) > 1 else ''
-            sys.stdout.write(' at byte offset' + plural + ' ' + (', '.join(str(x) for x in referrers[r])))
+        print blocks[r].addr, 'size =', blocks[r].req_size,
+        plural = 's' if len(referrers[r]) > 1 else ''
+        sys.stdout.write(' at byte offset' + plural + ' ' + (', '.join(str(x) for x in referrers[r])))
         print
-        print_trace_segment(args, traces, r)
+        print_trace_segment(args, stacks, blocks[r])
         print
+
+
+def cleanupTraceTable(args, frameTable, traceTable):
+    # Remove allocation functions at the start of traces.
+    if args.ignore_alloc_fns:
+        # Build a regexp that matches every function in allocatorFns.
+        escapedAllocatorFns = map(re.escape, allocatorFns)
+        fn_re = re.compile('|'.join(escapedAllocatorFns))
+
+        # Remove allocator fns from each stack trace.
+        for traceKey, frameKeys in traceTable.items():
+            numSkippedFrames = 0
+            for frameKey in frameKeys:
+                frameDesc = frameTable[frameKey]
+                if re.search(fn_re, frameDesc):
+                    numSkippedFrames += 1
+                else:
+                    break
+            if numSkippedFrames > 0:
+                traceTable[traceKey] = frameKeys[numSkippedFrames:]
+
+    # Trim the number of frames.
+    for traceKey, frameKeys in traceTable.items():
+        if len(frameKeys) > args.max_frames:
+            traceTable[traceKey] = frameKeys[:args.max_frames]
+
+
+def loadGraph(options):
+    sys.stderr.write('Loading file.\n')
+    with open(options.file_name, 'rb') as f:
+        j = json.load(f)
+
+    if j['version'] != outputVersion:
+        raise Exception("'version' property isn't '{:d}'".format(outputVersion))
+
+    invocation = j['invocation']
+    sampleBelowSize = invocation['sampleBelowSize']
+    heapIsSampled = sampleBelowSize > 1
+    if heapIsSampled:
+        raise Exception("Heap analysis is not going to work with sampled blocks.")
+
+    block_list = j['blockList']
+    blocks = {}
+
+    for json_block in block_list:
+        blocks[int(json_block['addr'], 16)] = BlockData(json_block)
+
+    traceTable = j['traceTable']
+    frameTable = j['frameTable']
+
+    cleanupTraceTable(options, frameTable, traceTable)
+
+    return (blocks, (traceTable, frameTable))
+
 
 def analyzeLogs():
-    args = parser.parse_args()
+    options = parser.parse_args()
 
-    # Load the graph and traces files, and get them into a good format.
-    block_edges = parse_graph.parse_block_graph_file(args.graph_file_name, not args.show_position)
+    (blocks, stacks) = loadGraph(options)
 
-    raw_traces = parse_report.load_live_graph_info(args.live_stack_trace_file_name)
+    block = int(options.block, 16)
 
-    traces = {}
-    req_sizes = {}
-
-    for t in raw_traces:
-        b = t.block
-        req_sizes[b] = t.req_bytes
-        traces[b] = t.frames
-
-
-    block = args.block
-
-    if not block in traces:
+    if not block in blocks:
         print 'Object', block, 'not found in traces.'
-
-    if not block in block_edges:
-        print 'Object', block, 'not found in edges.'
         print 'It could still be the target of some nodes.'
-
-    if args.flood_graph:
-        show_flood_graph(args, block_edges, traces, req_sizes, block)
         return
 
-    show_referrers(args, block_edges, traces, req_sizes, block)
+    #if options.flood_graph:
+    #    show_flood_graph(options, block_edges, traces, req_sizes, block)
+    #    return
+
+    show_referrers(options, blocks, stacks, block)
 
 
 if __name__ == "__main__":
