@@ -131,11 +131,8 @@ def clamp_block_contents(block_ranges, block_list):
 
 
 def clamp_file_addresses(input_file_name, output_file_name):
-    isZipped = False
-    opener = gzip.open if isZipped else open
-
     sys.stderr.write('Loading file.\n')
-    with opener(input_file_name, 'rb') as f:
+    with open(input_file_name, 'r') as f:
         j = json.load(f)
 
     if j['version'] != outputVersion:
@@ -156,7 +153,7 @@ def clamp_file_addresses(input_file_name, output_file_name):
     clamp_block_contents(block_ranges, block_list)
 
     sys.stderr.write('Saving file.\n')
-    with opener(output_file_name, 'w') as f:
+    with open(output_file_name, 'w') as f:
         json.dump(j, f, sort_keys=True)
 
 
