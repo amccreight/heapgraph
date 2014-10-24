@@ -72,9 +72,6 @@ def load_block_ranges(block_list):
 # Search the block ranges array for a block that address points into.
 # Address is an address as a hex string.
 def get_clamped_address(block_ranges, address):
-    if address == '(nil)':
-        return None
-
     address = int(address, 16)
 
     low = 0
@@ -94,8 +91,9 @@ def get_clamped_address(block_ranges, address):
 
 # An address is either already a pointer to a block,
 # a pointer into a block,
-# or not a pointer to a block.
-hit_miss = [0, 0, 0]
+# a non-null pointer to a block,
+# or a null pointer to a block.
+hit_miss = [0, 0, 0, 0]
 
 
 def clamp_address(block_ranges, address):
@@ -107,8 +105,11 @@ def clamp_address(block_ranges, address):
             hit_miss[1] += 1
         return clamped
     else:
-        hit_miss[2] += 1
-        return '0x0'
+        if address == '0':
+            hit_miss[3] += 1
+        else:
+            hit_miss[2] += 1
+        return '0'
 
 
 def clamp_block_contents(block_ranges, block_list):
@@ -123,10 +124,11 @@ def clamp_block_contents(block_ranges, block_list):
 
         block['contents'] = new_contents
 
-
-    sys.stderr.write('Number of pointers clamped to start of blocks: ' + str(hit_miss[1]) + '\n')
-    sys.stderr.write('Number of pointers already pointing to start of blocks: ' + str(hit_miss[0]) + '\n')
-    sys.stderr.write('Number of pointers not pointing into blocks: ' + str(hit_miss[2]) + '\n')
+    sys.stderr.write('Results:\n')
+    sys.stderr.write('  Number of pointers already pointing to start of blocks: ' + str(hit_miss[0]) + '\n')
+    sys.stderr.write('  Number of pointers clamped to start of blocks: ' + str(hit_miss[1]) + '\n')
+    sys.stderr.write('  Number of non-null pointers not pointing into blocks: ' + str(hit_miss[2]) + '\n')
+    sys.stderr.write('  Number of null pointers: ' + str(hit_miss[3]) + '\n')
 
 def clamp_file_addresses(input_file_name, output_file_name):
     sys.stderr.write('Loading file.\n')
