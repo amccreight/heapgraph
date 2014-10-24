@@ -124,11 +124,9 @@ def clamp_block_contents(block_ranges, block_list):
         block['contents'] = new_contents
 
 
-    sys.stderr.write('Num hits: ' + str(hit_miss[1]) +
-                     '  Num identity hits: ' + str(hit_miss[0]) +
-                     '  Num misses: ' + str(hit_miss[2]) + '\n')
-
-
+    sys.stderr.write('Number of pointers clamped to start of blocks: ' + str(hit_miss[1]) + '\n')
+    sys.stderr.write('Number of pointers already pointing to start of blocks: ' + str(hit_miss[0]) + '\n')
+    sys.stderr.write('Number of pointers not pointing into blocks: ' + str(hit_miss[2]) + '\n')
 
 def clamp_file_addresses(input_file_name, output_file_name):
     sys.stderr.write('Loading file.\n')
