@@ -91,6 +91,10 @@ parser.add_argument('-a', '--ignore-alloc-fns', action='store_true',
 parser.add_argument('-f', '--max-frames', type=range_1_24,
                     help='maximum number of frames to consider in each trace')
 
+parser.add_argument('-c', '--chain-reports', action='store_true',
+                    help='if only one block is found to hold onto the object, report the next one, too')
+
+
 ####
 
 
@@ -158,22 +162,43 @@ def show_flood_graph(args, block_edges, traces, req_sizes, block):
 
 
 def show_referrers(args, blocks, stacks, block):
-    referrers = {}
+    visited = set([])
 
-    for b, data in blocks.iteritems():
-        which_edge = 0
-        for e in data.contents:
-            if e == block:
-                referrers.setdefault(b, []).append(8 * which_edge)
-            which_edge += 1
+    while True:
+        referrers = {}
 
-    for r in referrers:
-        print blocks[r].addr, 'size =', blocks[r].req_size,
-        plural = 's' if len(referrers[r]) > 1 else ''
-        sys.stdout.write(' at byte offset' + plural + ' ' + (', '.join(str(x) for x in referrers[r])))
-        print
-        print_trace_segment(args, stacks, blocks[r])
-        print
+        for b, data in blocks.iteritems():
+            which_edge = 0
+            for e in data.contents:
+                if e == block:
+                    referrers.setdefault(b, []).append(8 * which_edge)
+                which_edge += 1
+
+        for r in referrers:
+            print blocks[r].addr, 'size =', blocks[r].req_size,
+            plural = 's' if len(referrers[r]) > 1 else ''
+            sys.stdout.write(' at byte offset' + plural + ' ' + (', '.join(str(x) for x in referrers[r])))
+            print
+            print_trace_segment(args, stacks, blocks[r])
+            print
+
+        if args.chain_reports:
+            if len(referrers) == 0:
+                sys.stdout.write('Found no more referrers.\n')
+                break
+            if len(referrers) > 1:
+                sys.stdout.write('Found too many referrers.\n')
+                break
+
+            sys.stdout.write('Chaining to next referrer.\n\n')
+            for r in referrers:
+                block = r
+            if block in visited:
+                sys.stdout.write('Found a loop.\n')
+                break
+            visited.add(block)
+        else:
+            break
 
 
 def cleanupTraceTable(args, frameTable, traceTable):
