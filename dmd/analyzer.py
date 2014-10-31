@@ -20,11 +20,13 @@ outputVersion = 1
 # we hit a non-matching frame, any subsequent frames won't be removed even if
 # they do match.)
 allocatorFns = [
+    'malloc (',
     'replace_malloc',
     'replace_calloc',
     'replace_realloc',
     'replace_memalign',
     'replace_posix_memalign',
+    'malloc_zone_malloc',
     'moz_xmalloc',
     'moz_xcalloc',
     'moz_xrealloc',
