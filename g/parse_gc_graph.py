@@ -23,6 +23,7 @@ GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels roots rootLabel
 
 nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
+weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
 # A bit of a hack.  I imagine this could fail in bizarre circumstances.
 
@@ -50,14 +51,18 @@ def parseRoots (f):
         roots[addr] = blackRoot
         # It would be classier to save all the root labels, though then we have to worry about gray vs black.
         rootLabels[addr] = lbl
-    elif l[:10] == '==========':
-      break
-    elif l[0] == '#':
-      # Skip over comments.
-      continue
     else:
-      print "Error: unknown line ", l
-      exit(-1)
+      wmm = weakMapEntryPatt.match(l)
+      if wmm:
+        continue
+      elif l[:10] == '==========':
+        break
+      elif l[0] == '#':
+        # Skip over comments.
+        continue
+      else:
+        print "Error: unknown line ", l
+        exit(-1)
 
   return [roots, rootLabels]
 
