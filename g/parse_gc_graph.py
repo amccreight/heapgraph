@@ -14,8 +14,8 @@ from collections import namedtuple
 
 
 
-GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels roots rootLabels')
-
+GraphAttribs = namedtuple('GraphAttribs', 'edgeLabels nodeLabels roots rootLabels weakMapEntries')
+WeakMapEntry = namedtuple('WeakMapEntry', 'weakMap key keyDelegate value')
 
 ####
 ####  Log parsing
@@ -35,6 +35,7 @@ def parseRoots (f):
   roots = {}
   rootLabels = {}
   blackRoot = True;
+  weakMapEntries = []
 
   for l in f:
     nm = nodePatt.match(l)
@@ -54,7 +55,8 @@ def parseRoots (f):
     else:
       wmm = weakMapEntryPatt.match(l)
       if wmm:
-        continue
+        weakMapEntries.append(WeakMapEntry(weakMap=wmm.group(1), key=wmm.group(2),
+                                           keyDelegate=wmm.group(3), value=wmm.group(4)))
       elif l[:10] == '==========':
         break
       elif l[0] == '#':
@@ -64,7 +66,7 @@ def parseRoots (f):
         print "Error: unknown line ", l
         exit(-1)
 
-  return [roots, rootLabels]
+  return [roots, rootLabels, weakMapEntries]
 
 
 # parse CC graph
@@ -120,11 +122,12 @@ def parseGCEdgeFile (fname):
     print 'Error opening file', fname
     exit(-1)
 
-  [roots, rootLabels] = parseRoots(f)
+  [roots, rootLabels, weakMapEntries] = parseRoots(f)
   [edges, edgeLabels, nodeLabels] = parseGraph(f)
   f.close()
 
-  ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels, roots=roots, rootLabels=rootLabels)
+  ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels, roots=roots,
+                     rootLabels=rootLabels, weakMapEntries=weakMapEntries)
   return (edges, ga)
 
 
