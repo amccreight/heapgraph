@@ -112,19 +112,20 @@ def explain_root(ga, root):
   print "via", ga.rootLabels[root], ":"
 
 # print out the path to an object that has been discovered
-def basic_print_path(args, ga, x, path):
-  if path == []:
-    explain_root(ga, x)
-  else:
-    explain_root(ga, path[0][0])
+def basic_print_path(args, ga, path):
+  explain_root(ga, path[0])
+  print_node(ga, path[0])
+  sys.stdout.write('\n')
+  prev = path[0]
 
-  for p in path:
-    print_node(ga, p[0])
-    sys.stdout.write('\n    ')
-    print_edge(args, ga, p[0], p[1])
+  for p in path[1:]:
+    sys.stdout.write('    ')
+    print_edge(args, ga, prev, p)
     sys.stdout.write(' ')
+    print_node(ga, p)
+    sys.stdout.write('\n')
+    prev = p
 
-  print_node(ga, x)
   print
   print
 
@@ -145,18 +146,19 @@ def simple_explain_root(ga, root):
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
 # paths.
-def print_simple_path(args, ga, x, path):
-  if path == []:
-    simple_explain_root(ga, x)
-  else:
-    simple_explain_root(ga, path[0][0])
+def print_simple_path(args, ga, path):
+  simple_explain_root(ga, path[0])
+  sys.stdout.write(' ')
+  print_simple_node(ga, path[0])
+  prev = path[0]
 
-  for p in path:
-    print_simple_node(ga, p[0])
+  for p in path[1:]:
     sys.stdout.write(' ')
-    print_edge(args, ga, p[0], p[1])
+    print_edge(args, ga, prev, p)
     sys.stdout.write(' ')
-  print_simple_node(ga, x)
+    print_simple_node(ga, p)
+    prev = p
+
   print
 
 
@@ -176,21 +178,21 @@ def print_reverse_simple_path(args, ga, x, path):
   print
 
 
-def print_path(args, ga, x, path):
+def print_path(args, ga, path):
   if args.simple_path:
     if args.print_reverse:
       print_reverse_simple_path(args, ga, x, path)
     else:
       path.reverse()
-      print_simple_path(args, ga, x, path)
+      print_simple_path(args, ga, path)
       path.reverse()
   elif args.dot_mode:
     path.reverse()
-    add_dot_mode_path(ga, x, path)
+    add_dot_mode_path(ga, path)
     path.reverse()
   else:
     path.reverse()
-    basic_print_path(args, ga, x, path)
+    basic_print_path(args, ga, path)
     path.reverse()
 
 
@@ -281,7 +283,7 @@ def findRootsDFS(args, g, ga, x):
   revg = reverseGraph(g)
   roots = ga.roots
   visited = set([])
-  path = []
+  path = [x]
   numPathsFound = [0]
 
   def findRootsDFSHelper(y):
@@ -290,7 +292,7 @@ def findRootsDFS(args, g, ga, x):
     visited.add(y)
     if y in roots and (not args.black_roots_only or roots[y]): # roots[y] is true for black roots
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
-        print_path(args, ga, x, path)
+        print_path(args, ga, path)
       numPathsFound[0] += 1
 
     # Whether or not y is a root, we want to find other paths to y.
@@ -298,7 +300,7 @@ def findRootsDFS(args, g, ga, x):
       return False
     path.append(None)
     for z in revg[y]:
-      path[-1] = (z, y)
+      path[-1] = z
       if findRootsDFSHelper(z):
         return True
     path.pop()

@@ -46,16 +46,8 @@ def union (m, rep, x, y):
 gPaths = []
 
 
-def add_dot_mode_path(ga, x, path):
-  if path == []:
-    newPath = [x]
-  else:
-    newPath = [path[0][0]]
-
-  for p in path:
-    newPath.append(p[1])
-
-  gPaths.append(newPath)
+def add_dot_mode_path(ga, path):
+  gPaths.append(path)
 
 
 def outputDotFile(args, ga, targs):
