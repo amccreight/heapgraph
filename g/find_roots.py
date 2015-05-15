@@ -26,7 +26,7 @@ from dotify_paths import add_dot_mode_path
 # Command line arguments.
 ########################################################
 
-parser = argparse.ArgumentParser(description='Find out what is rooting an object in the garbage collector graph.')
+parser = argparse.ArgumentParser(description='Find out what is rooting an object in the garbage collector graph using a shortest-path breadth-first algorithm.')
 
 parser.add_argument('file_name',
                     help='cycle collector graph file name')
@@ -53,9 +53,9 @@ parser.add_argument('--string-mode', '-sm', dest='string_mode', action='store_tr
                     default=False,
                     help='Match any string that has as a prefix the target passed in as the second argument.')
 
-parser.add_argument('--breadth-first', '-bfs', dest='use_bfs', action='store_true',
+parser.add_argument('--depth-first', '-dfs', dest='use_dfs', action='store_true',
                     default=False,
-                    help='Use the experimental breadth-first search shortest path algorithm for path finding.')
+                    help='Use the old breadth-first algorithm for finding paths.')
 
 ### Dot mode arguments.
 parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
@@ -372,12 +372,12 @@ def findGCRoots():
 
   for a in targs:
     if a in g:
-      if args.use_bfs:
+      if args.use_dfs:
+        findRootsDFS(args, g, ga, a)
+      else:
         print
         print
         findRootsBFS(args, g, ga, a)
-      else:
-        findRootsDFS(args, g, ga, a)
     else:
       sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
