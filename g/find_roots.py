@@ -241,7 +241,7 @@ def findRootsBFS(args, g, ga, target):
   path.pop()
   path.reverse()
 
-  print path
+  print_path(args, ga, path)
 
   return
 
@@ -373,6 +373,8 @@ def findGCRoots():
   for a in targs:
     if a in g:
       if args.use_bfs:
+        print
+        print
         findRootsBFS(args, g, ga, a)
       else:
         findRootsDFS(args, g, ga, a)
