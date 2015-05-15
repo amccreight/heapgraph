@@ -7,6 +7,7 @@
 import sys
 import re
 from collections import namedtuple
+from collections import deque
 import parse_gc_graph
 import argparse
 from dotify_paths import outputDotFile
@@ -51,6 +52,9 @@ parser.add_argument('--string-mode', '-sm', dest='string_mode', action='store_tr
                     default=False,
                     help='Match any string that has as a prefix the target passed in as the second argument.')
 
+parser.add_argument('--breadth-first', '-bfs', dest='use_bfs', action='store_true',
+                    default=False,
+                    help='Use the experimental breadth-first search shortest path algorithm for path finding.')
 
 ### Dot mode arguments.
 parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
@@ -192,6 +196,70 @@ def print_path(args, ga, roots, x, path):
 
 
 ########################################################
+# Breadth-first shortest path finding.
+########################################################
+
+def findRootsBFS(args, g, ga, target):
+  workList = deque()
+  distances = {}
+  limit = -1
+
+  # Create a fake start object that points to the roots and
+  # add it to the graph.
+  startObject = 'FAKE START OBJECT'
+  rootEdges = set([])
+  for r in ga.roots:
+    rootEdges.add(r)
+  assert not startObject in g
+  g[startObject] = rootEdges
+  distances[startObject] = (-1, None)
+  workList.append(startObject)
+
+  # Search the graph.
+  while workList:
+    x = workList.popleft()
+    dist = distances[x][0]
+
+    # Check the monotonicity of workList.
+    assert dist >= limit
+    limit = dist
+
+    if x == target:
+      # Found target: nothing to do?
+      # This will just find the shortest path to the object.
+      continue
+
+    if not x in g:
+      # x does not point to any other nodes.
+      continue
+
+    newDist = dist + 1
+    newDistNode = (dist + 1, x)
+
+    for y in g[x]:
+      if y in distances:
+        assert distances[y][0] <= newDist
+      else:
+        distances[y] = newDistNode
+        workList.append(y)
+
+  path = []
+  p = target
+  while p in distances:
+    path.append(p)
+    [_, p] = distances[p]
+
+  assert(path[-1] == startObject)
+  path.pop()
+  path.reverse()
+
+  print path
+
+  return
+
+
+
+########################################################
 # Depth-first path finding in a reverse graph.
 ########################################################
 
@@ -315,7 +383,10 @@ def findGCRoots():
 
   for a in targs:
     if a in g:
-      findRootsDFS(args, g, ga, roots, a)
+      if args.use_bfs:
+        findRootsBFS(args, g, ga, a)
+      else:
+        findRootsDFS(args, g, ga, roots, a)
     else:
       sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
