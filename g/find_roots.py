@@ -141,14 +141,14 @@ def simple_explain_root(ga, root):
   l = re.sub(r'0x[0-9a-f]{8}', '*', ga.rootLabels[root])
   #l = addrPatt.sub("ADDR", ga.rootLabels[root])
   #l = ga.rootLabels[root]
-  print "via", l, ":",
+  print "via", l,
 
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
 # paths.
 def print_simple_path(args, ga, path):
   simple_explain_root(ga, path[0])
-  sys.stdout.write(' ')
+  sys.stdout.write(': ')
   print_simple_node(ga, path[0])
   prev = path[0]
 
@@ -162,26 +162,26 @@ def print_simple_path(args, ga, path):
   print
 
 
-def print_reverse_simple_path(args, ga, x, path):
-  print_simple_node(ga, x)
-  for p in path:
+def print_reverse_simple_path(args, ga, path):
+  print_simple_node(ga, path[0])
+  prev = path[0]
+
+  for p in path[1:]:
     sys.stdout.write(' ')
-    print_edge(args, ga, p[0], p[1])
+    print_edge(args, ga, p, prev)
     sys.stdout.write(' ')
-    print_simple_node(ga, p[0])
+    print_simple_node(ga, p)
+    prev = p
 
   sys.stdout.write(' ')
-  if path == []:
-    simple_explain_root(ga, x)
-  else:
-    simple_explain_root(ga, path[-1][0])
+  simple_explain_root(ga, path[-1])
   print
 
 
 def print_path(args, ga, path):
   if args.simple_path:
     if args.print_reverse:
-      print_reverse_simple_path(args, ga, x, path)
+      print_reverse_simple_path(args, ga, path)
     else:
       path.reverse()
       print_simple_path(args, ga, path)
