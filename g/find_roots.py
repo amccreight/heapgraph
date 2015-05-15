@@ -6,6 +6,7 @@
 
 import sys
 import re
+import copy
 from collections import namedtuple
 from collections import deque
 import parse_gc_graph
@@ -163,6 +164,8 @@ def print_simple_path(args, ga, path):
 
 
 def print_reverse_simple_path(args, ga, path):
+  path.reverse()
+
   print_simple_node(ga, path[0])
   prev = path[0]
 
@@ -183,18 +186,11 @@ def print_path(args, ga, path):
     if args.print_reverse:
       print_reverse_simple_path(args, ga, path)
     else:
-      path.reverse()
       print_simple_path(args, ga, path)
-      path.reverse()
   elif args.dot_mode:
-    path.reverse()
     add_dot_mode_path(ga, path)
-    path.reverse()
   else:
-    path.reverse()
     basic_print_path(args, ga, path)
-    path.reverse()
-
 
 
 ########################################################
@@ -283,7 +279,7 @@ def findRootsDFS(args, g, ga, x):
   revg = reverseGraph(g)
   roots = ga.roots
   visited = set([])
-  path = [x]
+  revPath = [x]
   numPathsFound = [0]
 
   def findRootsDFSHelper(y):
@@ -292,18 +288,20 @@ def findRootsDFS(args, g, ga, x):
     visited.add(y)
     if y in roots and (not args.black_roots_only or roots[y]): # roots[y] is true for black roots
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
+        path = copy.copy(revPath)
+        path.reverse()
         print_path(args, ga, path)
       numPathsFound[0] += 1
 
     # Whether or not y is a root, we want to find other paths to y.
     if not y in revg:
       return False
-    path.append(None)
+    revPath.append(None)
     for z in revg[y]:
-      path[-1] = z
+      revPath[-1] = z
       if findRootsDFSHelper(z):
         return True
-    path.pop()
+    revPath.pop()
     return False
 
   if not (x in revg or x in roots):
