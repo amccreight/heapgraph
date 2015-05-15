@@ -98,7 +98,7 @@ def explain_root(ga, root):
   print "via", ga.rootLabels[root], ":"
 
 # print out the path to an object that has been discovered
-def print_path(args, revg, ga, roots, x, path):
+def basic_print_path(args, ga, roots, x, path):
   if path == []:
     explain_root(ga, x)
   else:
@@ -131,7 +131,7 @@ def simple_explain_root(ga, root):
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
 # paths.
-def print_simple_path(args, revg, ga, roots, x, path):
+def print_simple_path(args, ga, roots, x, path):
   if path == []:
     simple_explain_root(ga, x)
   else:
@@ -146,7 +146,7 @@ def print_simple_path(args, revg, ga, roots, x, path):
   print
 
 
-def print_reverse_simple_path(args, revg, ga, roots, x, path):
+def print_reverse_simple_path(args, ga, roots, x, path):
   print_simple_node(ga, x)
   for p in path:
     sys.stdout.write(' ')
@@ -194,18 +194,18 @@ def findRootsDFS(args, g, ga, roots, x):
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
         if args.simple_path:
           if args.print_reverse:
-            print_reverse_simple_path(args, revg, ga, roots, x, path)
+            print_reverse_simple_path(args, ga, roots, x, path)
           else:
             path.reverse()
-            print_simple_path(args, revg, ga, roots, x, path)
+            print_simple_path(args, ga, roots, x, path)
             path.reverse()
         elif args.dot_mode:
           path.reverse()
-          add_dot_mode_path(revg, ga, roots, x, path)
+          add_dot_mode_path(ga, roots, x, path)
           path.reverse()
         else:
           path.reverse()
-          print_path(args, revg, ga, roots, x, path)
+          basic_print_path(args, ga, roots, x, path)
           path.reverse()
       numPathsFound[0] += 1
 

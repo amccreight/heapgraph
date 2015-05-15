@@ -46,7 +46,7 @@ def union (m, rep, x, y):
 gPaths = []
 
 
-def add_dot_mode_path(revg, ga, roots, x, path):
+def add_dot_mode_path(ga, roots, x, path):
   if path == []:
     newPath = [x]
   else:
