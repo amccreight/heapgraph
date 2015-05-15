@@ -196,8 +196,11 @@ def findRootsBFS(args, g, ga, target):
   # add it to the graph.
   startObject = 'FAKE START OBJECT'
   rootEdges = set([])
-  for r in ga.roots:
+  for r, isBlack in ga.roots.iteritems():
+    if args.black_roots_only and not isBlack:
+      continue
     rootEdges.add(r)
+
   assert not startObject in g
   g[startObject] = rootEdges
   distances[startObject] = (-1, None)
