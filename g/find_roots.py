@@ -63,13 +63,13 @@ addrPatt = re.compile('[A-F0-9]+$|0x[a-f0-9]+$')
 
 
 # print a node description
-def print_node (ga, x):
+def print_node(ga, x):
   # truncate really long nodeLabels.
-  sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels[x][:50]))
+  sys.stdout.write('{0} [{1}]'.format(x, ga.nodeLabels[x][:50]))
 
 # print an edge description
-def print_edge (args, ga, x, y):
-  def print_edge_label (l):
+def print_edge(args, ga, x, y):
+  def print_edge_label(l):
     if len(l) == 2:
       l = l[0]
     sys.stdout.write(l)
@@ -94,11 +94,11 @@ def print_edge (args, ga, x, y):
     sys.stdout.write('-->')
 
 
-def explain_root (ga, root):
+def explain_root(ga, root):
   print "via", ga.rootLabels[root], ":"
 
 # print out the path to an object that has been discovered
-def print_path (args, revg, ga, roots, x, path):
+def print_path(args, revg, ga, roots, x, path):
   if path == []:
     explain_root(ga, x)
   else:
@@ -115,13 +115,13 @@ def print_path (args, revg, ga, roots, x, path):
   print
 
 
-def print_simple_node (ga, x):
+def print_simple_node(ga, x):
   l = ga.nodeLabels[x][:50]
   if l.endswith(' <no private>'):
     l = l[:-13]
-  sys.stdout.write ('[{0}]'.format(l))
+  sys.stdout.write('[{0}]'.format(l))
 
-def simple_explain_root (ga, root):
+def simple_explain_root(ga, root):
   # This won't work on Windows.
   l = re.sub(r'0x[0-9a-f]{8}', '*', ga.rootLabels[root])
   #l = addrPatt.sub("ADDR", ga.rootLabels[root])
@@ -131,7 +131,7 @@ def simple_explain_root (ga, root):
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
 # paths.
-def print_simple_path (args, revg, ga, roots, x, path):
+def print_simple_path(args, revg, ga, roots, x, path):
   if path == []:
     simple_explain_root(ga, x)
   else:
@@ -146,7 +146,7 @@ def print_simple_path (args, revg, ga, roots, x, path):
   print
 
 
-def print_reverse_simple_path (args, revg, ga, roots, x, path):
+def print_reverse_simple_path(args, revg, ga, roots, x, path):
   print_simple_node(ga, x)
   for p in path:
     sys.stdout.write(' ')
@@ -166,7 +166,7 @@ def print_reverse_simple_path (args, revg, ga, roots, x, path):
 
 
 
-def reverseGraph (g):
+def reverseGraph(g):
   g2 = {}
   print 'Reversing graph.',
   sys.stdout.flush()
@@ -180,13 +180,13 @@ def reverseGraph (g):
 
 # Look for roots and print out the paths to the given object
 # This works by reversing the graph, then flooding to find roots.
-def findRootsDFS (args, g, ga, roots, x):
+def findRootsDFS(args, g, ga, roots, x):
   revg = reverseGraph(g)
   visited = set([])
   path = []
   numPathsFound = [0]
 
-  def findRootsDFSHelper (y):
+  def findRootsDFSHelper(y):
     if y in visited:
       return False
     visited.add(y)
@@ -221,7 +221,7 @@ def findRootsDFS (args, g, ga, roots, x):
     return False
 
   if not (x in revg or x in roots):
-    sys.stdout.write ('No other nodes point to {0} and it is not a root.\n\n'.format(x))
+    sys.stdout.write('No other nodes point to {0} and it is not a root.\n\n'.format(x))
     return
 
   findRootsDFSHelper(x)
@@ -235,10 +235,10 @@ def findRootsDFS (args, g, ga, roots, x):
 
 
 def loadGraph(fname):
-  sys.stdout.write ('Parsing {0}. '.format(fname))
+  sys.stdout.write('Parsing {0}. '.format(fname))
   sys.stdout.flush()
   (g, ga) = parse_gc_graph.parseGCEdgeFile(fname)
-  #sys.stdout.write ('Converting to single graph. ')
+  #sys.stdout.write('Converting to single graph. ')
   #sys.stdout.flush()
   g = parse_gc_graph.toSinglegraph(g)
   print 'Done loading graph.',
@@ -262,7 +262,7 @@ def stringTargets(ga, stringTarget):
 
 targetDebug = False
 
-def selectTargets (args, g, ga):
+def selectTargets(args, g, ga):
   if args.string_mode:
     targs = stringTargets(ga, args.target)
   elif addrPatt.match(args.target):
@@ -297,7 +297,7 @@ def selectTargets (args, g, ga):
 def findGCRoots():
   args = parser.parse_args()
 
-  (g, ga) = loadGraph (args.file_name)
+  (g, ga) = loadGraph(args.file_name)
   roots = ga.roots
 
   targs = selectTargets(args, g, ga)
