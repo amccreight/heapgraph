@@ -12,12 +12,17 @@ import argparse
 from dotify_paths import outputDotFile
 from dotify_paths import add_dot_mode_path
 
+########################################################
+# Find the objects that are rooting a particular object
+# (or objects of a certain class) in a Firefox garbage
+# collector log.
+########################################################
 
-# Find the objects that are rooting a particular object (or objects of
-# a certain class) in a Firefox garbage collector log.
 
 
-# Command line arguments
+########################################################
+# Command line arguments.
+########################################################
 
 parser = argparse.ArgumentParser(description='Find out what is rooting an object in the garbage collector graph.')
 
@@ -58,6 +63,11 @@ parser.add_argument('--dot-mode-edges', '-de', dest='dot_mode_edges', action='st
                     default=False,
                     help='Show edges in dot mode.')
 
+
+
+########################################################
+# Path printing
+########################################################
 
 addrPatt = re.compile('[A-F0-9]+$|0x[a-f0-9]+$')
 
@@ -162,9 +172,28 @@ def print_reverse_simple_path(args, ga, roots, x, path):
   print
 
 
+def print_path(args, ga, roots, x, path):
+  if args.simple_path:
+    if args.print_reverse:
+      print_reverse_simple_path(args, ga, roots, x, path)
+    else:
+      path.reverse()
+      print_simple_path(args, ga, roots, x, path)
+      path.reverse()
+  elif args.dot_mode:
+    path.reverse()
+    add_dot_mode_path(ga, roots, x, path)
+    path.reverse()
+  else:
+    path.reverse()
+    basic_print_path(args, ga, roots, x, path)
+    path.reverse()
 
 
 
+########################################################
+# Depth-first path finding in a reverse graph.
+########################################################
 
 def reverseGraph(g):
   g2 = {}
@@ -192,21 +221,7 @@ def findRootsDFS(args, g, ga, roots, x):
     visited.add(y)
     if y in roots and (not args.black_roots_only or roots[y]): # roots[y] is true for black roots
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
-        if args.simple_path:
-          if args.print_reverse:
-            print_reverse_simple_path(args, ga, roots, x, path)
-          else:
-            path.reverse()
-            print_simple_path(args, ga, roots, x, path)
-            path.reverse()
-        elif args.dot_mode:
-          path.reverse()
-          add_dot_mode_path(ga, roots, x, path)
-          path.reverse()
-        else:
-          path.reverse()
-          basic_print_path(args, ga, roots, x, path)
-          path.reverse()
+        print_path(args, ga, roots, x, path)
       numPathsFound[0] += 1
 
     # Whether or not y is a root, we want to find other paths to y.
@@ -233,6 +248,10 @@ def findRootsDFS(args, g, ga, roots, x):
   else:
     print 'Displayed', args.max_num_paths, 'out of', numPathsFound[0], 'total paths found.'
 
+
+########################################################
+# Top-level file and target selection
+########################################################
 
 def loadGraph(fname):
   sys.stdout.write('Parsing {0}. '.format(fname))
@@ -284,14 +303,6 @@ def selectTargets(args, g, ga):
         sys.stderr.write('\n')
 
   return targs
-
-
-
-
-
-
-
-####################
 
 
 def findGCRoots():
