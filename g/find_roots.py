@@ -277,8 +277,9 @@ def reverseGraph(g):
 
 # Look for roots and print out the paths to the given object
 # This works by reversing the graph, then flooding to find roots.
-def findRootsDFS(args, g, ga, roots, x):
+def findRootsDFS(args, g, ga, x):
   revg = reverseGraph(g)
+  roots = ga.roots
   visited = set([])
   path = []
   numPathsFound = [0]
@@ -377,8 +378,6 @@ def findGCRoots():
   args = parser.parse_args()
 
   (g, ga) = loadGraph(args.file_name)
-  roots = ga.roots
-
   targs = selectTargets(args, g, ga)
 
   for a in targs:
@@ -386,7 +385,7 @@ def findGCRoots():
       if args.use_bfs:
         findRootsBFS(args, g, ga, a)
       else:
-        findRootsDFS(args, g, ga, roots, a)
+        findRootsDFS(args, g, ga, a)
     else:
       sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
