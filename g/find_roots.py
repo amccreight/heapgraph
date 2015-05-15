@@ -91,6 +91,9 @@ def print_edge(args, ga, x, y):
 
   if args.print_reverse:
     sys.stdout.write('<--')
+    temp = x
+    x = y
+    y = temp
   else:
     sys.stdout.write('--')
 
@@ -148,8 +151,12 @@ def simple_explain_root(ga, root):
 # eliminating differences that are uninteresting with a large set of
 # paths.
 def print_simple_path(args, ga, path):
-  simple_explain_root(ga, path[0])
-  sys.stdout.write(': ')
+  if args.print_reverse:
+    path.reverse()
+  else:
+    simple_explain_root(ga, path[0])
+    sys.stdout.write(': ')
+
   print_simple_node(ga, path[0])
   prev = path[0]
 
@@ -160,33 +167,16 @@ def print_simple_path(args, ga, path):
     print_simple_node(ga, p)
     prev = p
 
-  print
-
-
-def print_reverse_simple_path(args, ga, path):
-  path.reverse()
-
-  print_simple_node(ga, path[0])
-  prev = path[0]
-
-  for p in path[1:]:
+  if args.print_reverse:
     sys.stdout.write(' ')
-    print_edge(args, ga, p, prev)
-    sys.stdout.write(' ')
-    print_simple_node(ga, p)
-    prev = p
+    simple_explain_root(ga, path[-1])
 
-  sys.stdout.write(' ')
-  simple_explain_root(ga, path[-1])
   print
 
 
 def print_path(args, ga, path):
   if args.simple_path:
-    if args.print_reverse:
-      print_reverse_simple_path(args, ga, path)
-    else:
-      print_simple_path(args, ga, path)
+    print_simple_path(args, ga, path)
   elif args.dot_mode:
     add_dot_mode_path(ga, path)
   else:
