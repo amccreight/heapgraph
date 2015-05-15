@@ -16,13 +16,20 @@ def findRoots(args, g, ga, target):
 
   workList = deque()
   distances = {}
-  limit = 0
+  limit = -1
 
-  rootNode = (0, 'ROOT')
+  # Create a fake start object that points to the roots and
+  # add it to the graph.
+  startObject = 'FAKE START OBJECT'
+  rootEdges = set([])
   for r in ga.roots:
-    distances[r] = rootNode
-    workList.append(r)
+    rootEdges.add(r)
+  assert not startObject in g
+  g[startObject] = rootEdges
+  distances[startObject] = (-1, None)
+  workList.append(startObject)
 
+  # Search the graph.
   while workList:
     x = workList.popleft()
     dist = distances[x][0]
@@ -59,6 +66,8 @@ def findRoots(args, g, ga, target):
     path.append(p)
     [_, p] = distances[p]
 
+  assert(path[-1] == startObject)
+  path.pop()
   path.reverse()
 
   print path
