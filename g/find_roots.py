@@ -10,26 +10,8 @@ from collections import namedtuple
 import parse_gc_graph
 import argparse
 
-
-
-# (this comment is out of date)
-
-
 # Find the objects that are rooting a particular object (or objects of
-# a certain class) in the cycle collector graph
-#
-# This works by reversing the graph, then flooding to find roots.
-#
-# There are various options to alter what is treated as a root, but
-# these are mostly experimental, so they may not produce particularly
-# useful results.
-#
-# --node-name-as-root nsRange (for example) will treat all objects
-# with the node name nsRange as roots.  This is useful if a previous
-# analysis has determined that a leak always involves an object being
-# held onto by a certain class, and you want to continue with manual
-# analysis starting at that object.
-
+# a certain class) in a Firefox garbage collector log.
 
 
 # Command line arguments
@@ -190,13 +172,27 @@ def add_dot_mode_path(revg, ga, roots, x, path):
   gPaths.append(newPath)
 
 
-# look for roots and print out the paths to the given object
-def findRoots (args, revg, ga, roots, x):
+def reverseGraph (g):
+  g2 = {}
+  print 'Reversing graph.',
+  sys.stdout.flush()
+  for src, dsts in g.iteritems():
+    for d in dsts:
+      g2.setdefault(d, set([])).add(src)
+  print 'Done.'
+  print
+  return g2
+
+
+# Look for roots and print out the paths to the given object
+# This works by reversing the graph, then flooding to find roots.
+def findRootsDFS (args, g, ga, roots, x):
+  revg = reverseGraph(g)
   visited = set([])
   path = []
   numPathsFound = [0]
 
-  def findRootsDFS (y):
+  def findRootsDFSHelper (y):
     if y in visited:
       return False
     visited.add(y)
@@ -225,7 +221,7 @@ def findRoots (args, revg, ga, roots, x):
     path.append(None)
     for z in revg[y]:
       path[-1] = (z, y)
-      if findRootsDFS(z):
+      if findRootsDFSHelper(z):
         return True
     path.pop()
     return False
@@ -234,7 +230,7 @@ def findRoots (args, revg, ga, roots, x):
     sys.stdout.write ('No other nodes point to {0} and it is not a root.\n\n'.format(x))
     return
 
-  findRootsDFS(x)
+  findRootsDFSHelper(x)
 
   if numPathsFound[0] == 0:
     print 'No roots found.'
@@ -242,18 +238,6 @@ def findRoots (args, revg, ga, roots, x):
     print 'Found and displayed', numPathsFound[0], 'paths.'
   else:
     print 'Displayed', args.max_num_paths, 'out of', numPathsFound[0], 'total paths found.'
-
-
-def reverseGraph (g):
-  g2 = {}
-  print 'Reversing graph.',
-  sys.stdout.flush()
-  for src, dsts in g.iteritems():
-    for d in dsts:
-      g2.setdefault(d, set([])).add(src)
-  print 'Done.'
-  print
-  return g2
 
 
 def loadGraph(fname):
@@ -493,13 +477,12 @@ def findGCRoots():
 
   (g, ga) = loadGraph (args.file_name)
   roots = ga.roots
-  revg = reverseGraph(g)
 
   targs = selectTargets(args, g, ga)
 
   for a in targs:
     if a in g:
-      findRoots(args, revg, ga, roots, a)
+      findRootsDFS(args, g, ga, roots, a)
     else:
       sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
