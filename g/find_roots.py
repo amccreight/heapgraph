@@ -272,9 +272,10 @@ def findRootsBFS(args, g, ga, target):
   # Print out the paths by unwinding backwards to generate a path,
   # then print the path. Accumulate any weak maps found during this
   # process into the printWorkList queue, and print out what keeps
-  # them alive.
+  # them alive. Only print out why each map is alive once.
   printWorkList = deque()
   printWorkList.append(target)
+  printedThings = set([target])
 
   while printWorkList:
     p = printWorkList.popleft()
@@ -291,8 +292,9 @@ def findRootsBFS(args, g, ga, target):
 
         ga.edgeLabels[k].setdefault(p, []).append("value in weak map " + m)
         p = k
-        if not args.hide_weak_maps:
+        if not m in printedThings and not args.hide_weak_maps:
           printWorkList.append(m)
+          printedThings.add(m)
 
     assert(path[-1] == startObject)
     path.pop()
