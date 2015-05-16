@@ -187,10 +187,19 @@ def print_path(args, ga, path):
 # Breadth-first shortest path finding.
 ########################################################
 
+traceWeakMaps = False
+
+
 def findRootsBFS(args, g, ga, target):
   workList = deque()
   distances = {}
   limit = -1
+
+  # For now, ignore keyDelegates.
+  weakData = {}
+  for wme in ga.weakMapEntries:
+    weakData.setdefault(wme.weakMap, set([])).add((True, wme.key, wme.value))
+    weakData.setdefault(wme.key, set([])).add((False, wme.weakMap, wme.value))
 
   # Create a fake start object that points to the roots and
   # add it to the graph.
@@ -225,7 +234,7 @@ def findRootsBFS(args, g, ga, target):
       continue
 
     newDist = dist + 1
-    newDistNode = (dist + 1, x)
+    newDistNode = (newDist, x)
 
     for y in g[x]:
       if y in distances:
@@ -234,17 +243,56 @@ def findRootsBFS(args, g, ga, target):
         distances[y] = newDistNode
         workList.append(y)
 
-  path = []
-  p = target
-  while p in distances:
-    path.append(p)
-    [_, p] = distances[p]
+    if traceWeakMaps and x in weakData:
+      for isMap, other, v in weakData[x]:
+        if not other in distances:
+          # Haven't found the matching key or map yet.
+          continue
+        if distances[other][0] > dist:
+          # The other key or map in the pair is farther away, so we
+          # must wait for the farther entry before processing it.
+          continue
 
-  assert(path[-1] == startObject)
-  path.pop()
-  path.reverse()
+        if v in distances:
+          assert distances[v][0] <= newDist
+          continue
 
-  print_path(args, ga, path)
+        if isMap:
+          m = x
+          k = other
+        else:
+          m = other
+          k = x
+        distances[v] = (newDist, m, k)
+        workList.append(v)
+
+
+  # Print out the paths by unwinding backwards to generate a path,
+  # then print the path. Accumulate any weak maps found during this
+  # process into the printWorkList queue, and print out what keeps
+  # them alive.
+  printWorkList = deque()
+  printWorkList.append(target)
+
+  # XXX Want an option to disable showing why the weak maps are alive.
+  while printWorkList:
+    p = printWorkList.popleft()
+    path = []
+    while p in distances:
+      path.append(p)
+      dist = distances[p]
+      if len(dist) == 2:
+        [_, p] = dist
+      else:
+        # The weak map key is probably more interesting,
+        # so follow it, and worry about the weak map later.
+        [_, m, p] = dist
+        printWorkList.append(m)
+
+    assert(path[-1] == startObject)
+    path.pop()
+    path.reverse()
+    print_path(args, ga, path)
 
   return
 
