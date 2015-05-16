@@ -187,8 +187,6 @@ def print_path(args, ga, path):
 # Breadth-first shortest path finding.
 ########################################################
 
-traceWeakMaps = False
-
 
 def findRootsBFS(args, g, ga, target):
   workList = deque()
@@ -243,7 +241,7 @@ def findRootsBFS(args, g, ga, target):
         distances[y] = newDistNode
         workList.append(y)
 
-    if traceWeakMaps and x in weakData:
+    if x in weakData:
       for isMap, other, v in weakData[x]:
         if not other in distances:
           # Haven't found the matching key or map yet.
@@ -286,7 +284,10 @@ def findRootsBFS(args, g, ga, target):
       else:
         # The weak map key is probably more interesting,
         # so follow it, and worry about the weak map later.
-        [_, m, p] = dist
+        [_, m, k] = dist
+
+        ga.edgeLabels[k].setdefault(p, []).append("value in weak map " + m)
+        p = k
         printWorkList.append(m)
 
     assert(path[-1] == startObject)
