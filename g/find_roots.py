@@ -57,6 +57,10 @@ parser.add_argument('--depth-first', '-dfs', dest='use_dfs', action='store_true'
                     default=False,
                     help='Use the old breadth-first algorithm for finding paths.')
 
+parser.add_argument('--hide-weak-maps', '-hwm', dest='hide_weak_maps', action='store_true',
+                    default=False,
+                    help='If selected, don\'t show why any weak maps in the path are alive.')
+
 ### Dot mode arguments.
 parser.add_argument('--dot-mode', '-d', dest='dot_mode', action='store_true',
                     default=False,
@@ -272,7 +276,6 @@ def findRootsBFS(args, g, ga, target):
   printWorkList = deque()
   printWorkList.append(target)
 
-  # XXX Want an option to disable showing why the weak maps are alive.
   while printWorkList:
     p = printWorkList.popleft()
     path = []
@@ -288,7 +291,8 @@ def findRootsBFS(args, g, ga, target):
 
         ga.edgeLabels[k].setdefault(p, []).append("value in weak map " + m)
         p = k
-        printWorkList.append(m)
+        if not args.hide_weak_maps:
+          printWorkList.append(m)
 
     assert(path[-1] == startObject)
     path.pop()
