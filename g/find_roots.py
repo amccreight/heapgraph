@@ -296,11 +296,13 @@ def findRootsBFS(args, g, ga, target):
           printWorkList.append(m)
           printedThings.add(m)
 
-    assert(path[-1] == startObject)
-    path.pop()
-    path.reverse()
-    print_path(args, ga, path)
-
+    if path:
+      assert(path[-1] == startObject)
+      path.pop()
+      path.reverse()
+      print_path(args, ga, path)
+    else:
+      print 'Didn\'t find a path.'
   return
 
 
