@@ -261,7 +261,8 @@ def findRootsBFS(args, g, ga, target):
           assert distances[wme.value][0] <= newDist
           continue
 
-        distances[wme.value] = (newDist, wme.weakMap, wme.key)
+        lbl = "value in weak map " + wme.weakMap
+        distances[wme.value] = (newDist, wme.weakMap, wme.key, lbl)
         workList.append(wme.value)
 
 
@@ -284,9 +285,9 @@ def findRootsBFS(args, g, ga, target):
       else:
         # The weak map key is probably more interesting,
         # so follow it, and worry about the weak map later.
-        [_, m, k] = dist
+        [_, m, k, lbl] = dist
 
-        ga.edgeLabels[k].setdefault(p, []).append("value in weak map " + m)
+        ga.edgeLabels[k].setdefault(p, []).append(lbl)
         p = k
         if not m in printedThings and not args.hide_weak_maps:
           printWorkList.append(m)
