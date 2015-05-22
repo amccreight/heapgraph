@@ -7,13 +7,15 @@
 
 # Try to find out something useful about a particular object.
 
+import json
+import gzip
 import sys
 import argparse
-import json
 import re
 
+
 # The DMD output version this script handles.
-outputVersion = 1
+outputVersion = 4
 
 # If --ignore-alloc-fns is specified, stack frames containing functions that
 # match these strings will be removed from the *start* of stack traces. (Once
@@ -228,7 +230,11 @@ def cleanupTraceTable(args, frameTable, traceTable):
 
 def loadGraph(options):
     sys.stderr.write('Loading file.\n')
-    with open(options.file_name, 'rb') as f:
+    # Handle gzipped input if necessary.
+    isZipped = options.file_name.endswith('.gz')
+    opener = gzip.open if isZipped else open
+
+    with opener(options.file_name, 'rb') as f:
         j = json.load(f)
 
     if j['version'] != outputVersion:
