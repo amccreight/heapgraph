@@ -219,6 +219,8 @@ def findRootsBFS(args, g, ga, target):
   for wme in ga.weakMapEntries:
     weakData.setdefault(wme.weakMap, set([])).add(wme)
     weakData.setdefault(wme.key, set([])).add(wme)
+    if wme.keyDelegate != '0x0':
+      weakData.setdefault(wme.keyDelegate, set([])).add(wme)
 
   # Create a fake start object that points to the roots and
   # add it to the graph.
@@ -264,8 +266,9 @@ def findRootsBFS(args, g, ga, target):
 
     if x in weakData:
       for wme in weakData[x]:
-        assert x == wme.weakMap or x == wme.key
+        assert x == wme.weakMap or x == wme.key or x == wme.keyDelegate
         traverseWeakMapEntry(dist, wme.key, wme.weakMap, wme.value, "value in weak map " + wme.weakMap)
+        traverseWeakMapEntry(dist, wme.keyDelegate, wme.weakMap, wme.key, "key delegate in weak map " + wme.weakMap)
 
 
   # Print out the paths by unwinding backwards to generate a path,
