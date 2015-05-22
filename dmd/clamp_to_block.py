@@ -32,63 +32,63 @@ class AddrRange:
         return self.start + self.length
 
 
-def load_block_ranges(block_list):
+def loadBlockRanges(blockList):
     ranges = []
 
-    for block in block_list:
+    for block in blockList:
         ranges.append(AddrRange(block['addr'], block['req']))
 
     ranges.sort(key=lambda r: r.start)
 
     # Make sure there are no overlapping blocks.
-    new_ranges = []
-    last_overlapped = False
+    newRanges = []
+    lastOverlapped = False
 
-    for curr_range in ranges:
-        if len(new_ranges) == 0:
-            new_ranges.append(curr_range)
+    for currRange in ranges:
+        if len(newRanges) == 0:
+            newRanges.append(currRange)
             continue
 
-        prev_range = new_ranges[-1]
-        assert prev_range.start < curr_range.start
+        prevRange = newRanges[-1]
+        assert prevRange.start < currRange.start
 
-        if curr_range.start < prev_range.end():
-            last_overlapped = True
+        if currRange.start < prevRange.end():
+            lastOverlapped = True
             # Keep the block at the end that ends the latest.
-            if prev_range.end() < curr_range.end():
-                new_ranges[-1] = curr_range
+            if prevRange.end() < currRange.end():
+                newRanges[-1] = currRange
         else:
-            if last_overlapped:
-                new_ranges[-1] = curr_range
+            if lastOverlapped:
+                newRanges[-1] = currRange
             else:
-                new_ranges.append(curr_range)
-            last_overlapped = False
+                newRanges.append(currRange)
+            lastOverlapped = False
 
-    if last_overlapped:
-        new_ranges.pop()
-        last_overlapped = False
+    if lastOverlapped:
+        newRanges.pop()
+        lastOverlapped = False
 
-    assert len(ranges) == len(new_ranges) # Shouldn't have any overlapping blocks.
+    assert len(ranges) == len(newRanges) # Shouldn't have any overlapping blocks.
 
-    return new_ranges
+    return newRanges
 
 
 # Search the block ranges array for a block that address points into.
 # Address is an address as a hex string.
-def get_clamped_address(block_ranges, address):
+def getClampedAddress(blockRanges, address):
     address = int(address, 16)
 
     low = 0
-    high = len(block_ranges) - 1
+    high = len(blockRanges) - 1
     while low <= high:
         mid = low + (high - low) / 2
-        if address < block_ranges[mid].start:
+        if address < blockRanges[mid].start:
             high = mid - 1
             continue
-        if address >= block_ranges[mid].end():
+        if address >= blockRanges[mid].end():
             low = mid + 1
             continue
-        return block_ranges[mid].block
+        return blockRanges[mid].block
 
     return None
 
@@ -97,49 +97,50 @@ def get_clamped_address(block_ranges, address):
 # a pointer into a block,
 # a non-null pointer to a block,
 # or a null pointer to a block.
-hit_miss = [0, 0, 0, 0]
+hitMiss = [0, 0, 0, 0]
 
 
-def clamp_address(block_ranges, address):
-    clamped = get_clamped_address(block_ranges, address)
+def clampAddress(blockRanges, address):
+    clamped = getClampedAddress(blockRanges, address)
     if clamped:
         if clamped == address:
-            hit_miss[0] += 1
+            hitMiss[0] += 1
         else:
-            hit_miss[1] += 1
+            hitMiss[1] += 1
         return clamped
     else:
         if address == '0':
-            hit_miss[3] += 1
+            hitMiss[3] += 1
         else:
-            hit_miss[2] += 1
+            hitMiss[2] += 1
         return '0'
 
 
-def clamp_block_contents(block_ranges, block_list):
-    for block in block_list:
+def clampBlockContents(blockRanges, blockList):
+    for block in blockList:
         # Small blocks don't have any contents.
         if not 'contents' in block:
             continue
 
-        new_contents = []
+        newContents = []
         for address in block['contents']:
-            new_contents.append(clamp_address(block_ranges, address))
+            newContents.append(clampAddress(blockRanges, address))
 
-        block['contents'] = new_contents
+        block['contents'] = newContents
 
     sys.stderr.write('Results:\n')
-    sys.stderr.write('  Number of pointers already pointing to start of blocks: ' + str(hit_miss[0]) + '\n')
-    sys.stderr.write('  Number of pointers clamped to start of blocks: ' + str(hit_miss[1]) + '\n')
-    sys.stderr.write('  Number of non-null pointers not pointing into blocks: ' + str(hit_miss[2]) + '\n')
-    sys.stderr.write('  Number of null pointers: ' + str(hit_miss[3]) + '\n')
+    sys.stderr.write('  Number of pointers already pointing to start of blocks: ' + str(hitMiss[0]) + '\n')
+    sys.stderr.write('  Number of pointers clamped to start of blocks: ' + str(hitMiss[1]) + '\n')
+    sys.stderr.write('  Number of non-null pointers not pointing into blocks: ' + str(hitMiss[2]) + '\n')
+    sys.stderr.write('  Number of null pointers: ' + str(hitMiss[3]) + '\n')
 
-def clamp_file_addresses(input_file_name):
+
+def clampFileAddresses(inputFileName):
     sys.stderr.write('Loading file.\n')
-    isZipped = input_file_name.endswith('.gz')
+    isZipped = inputFileName.endswith('.gz')
     opener = gzip.open if isZipped else open
 
-    with opener(input_file_name, 'rb') as f:
+    with opener(inputFileName, 'rb') as f:
         j = json.load(f)
 
     if j['version'] != outputVersion:
@@ -151,13 +152,13 @@ def clamp_file_addresses(input_file_name):
     if heapIsSampled:
         raise Exception("Heap analysis is not going to work with sampled blocks.")
 
-    block_list = j['blockList']
+    blockList = j['blockList']
 
     sys.stderr.write('Creating block range list.\n')
-    block_ranges = load_block_ranges(block_list)
+    blockRanges = loadBlockRanges(blockList)
 
     sys.stderr.write('Clamping block contents.\n')
-    clamp_block_contents(block_ranges, block_list)
+    clampBlockContents(blockRanges, blockList)
 
     sys.stderr.write('Saving file.\n')
 
@@ -170,7 +171,7 @@ def clamp_file_addresses(input_file_name):
 
     json.dump(j, tmpFile, sort_keys=True)
 
-    shutil.move(tmpFilename, input_file_name)
+    shutil.move(tmpFilename, inputFileName)
 
 
 if __name__ == "__main__":
@@ -178,4 +179,4 @@ if __name__ == "__main__":
         sys.stderr.write('Not enough arguments: need input file names.\n')
         exit()
 
-    clamp_file_addresses(sys.argv[1])
+    clampFileAddresses(sys.argv[1])
