@@ -191,11 +191,28 @@ def print_path(args, ga, path):
 # Breadth-first shortest path finding.
 ########################################################
 
-
 def findRootsBFS(args, g, ga, target):
   workList = deque()
   distances = {}
   limit = -1
+
+  def traverseWeakMapEntry(dist, k, m, v, lbl):
+    if not k in distances or not m in distances:
+      # Haven't found either the key or map yet.
+      return
+
+    if distances[k][0] > dist or distances[m][0] > dist:
+      # Either the key or the weak map is farther away, so we
+      # must wait for the farther one before processing it.
+      return
+
+    if v in distances:
+      assert distances[v][0] <= dist + 1
+      return
+
+    distances[v] = (dist + 1, k, m, lbl)
+    workList.append(v)
+
 
   # For now, ignore keyDelegates.
   weakData = {}
@@ -248,22 +265,7 @@ def findRootsBFS(args, g, ga, target):
     if x in weakData:
       for wme in weakData[x]:
         assert x == wme.weakMap or x == wme.key
-        if not wme.weakMap in distances or not wme.key in distances:
-          # Haven't found the matching map or key yet.
-          continue
-
-        if distances[wme.weakMap][0] > dist or distances[wme.key][0] > dist:
-          # Either the weak map or the key is farther away, so we
-          # must wait for the farther entry before processing it.
-          continue
-
-        if wme.value in distances:
-          assert distances[wme.value][0] <= newDist
-          continue
-
-        lbl = "value in weak map " + wme.weakMap
-        distances[wme.value] = (newDist, wme.key, wme.weakMap, lbl)
-        workList.append(wme.value)
+        traverseWeakMapEntry(dist, wme.key, wme.weakMap, wme.value, "value in weak map " + wme.weakMap)
 
 
   # Print out the paths by unwinding backwards to generate a path,
