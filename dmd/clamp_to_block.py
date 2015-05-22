@@ -9,11 +9,15 @@
 # blocks they are in, where the set of allocated blocks is defined by
 # a stack trace file.
 
-import sys
 import json
+import gzip
+import sys
+import tempfile
+import shutil
+
 
 # The DMD output version this script handles.
-outputVersion = 1
+outputVersion = 4
 
 
 # Start is the address of the first byte of the block, while end is
@@ -130,9 +134,12 @@ def clamp_block_contents(block_ranges, block_list):
     sys.stderr.write('  Number of non-null pointers not pointing into blocks: ' + str(hit_miss[2]) + '\n')
     sys.stderr.write('  Number of null pointers: ' + str(hit_miss[3]) + '\n')
 
-def clamp_file_addresses(input_file_name, output_file_name):
+def clamp_file_addresses(input_file_name):
     sys.stderr.write('Loading file.\n')
-    with open(input_file_name, 'r') as f:
+    isZipped = input_file_name.endswith('.gz')
+    opener = gzip.open if isZipped else open
+
+    with opener(input_file_name, 'rb') as f:
         j = json.load(f)
 
     if j['version'] != outputVersion:
@@ -153,13 +160,22 @@ def clamp_file_addresses(input_file_name, output_file_name):
     clamp_block_contents(block_ranges, block_list)
 
     sys.stderr.write('Saving file.\n')
-    with open(output_file_name, 'w') as f:
-        json.dump(j, f, sort_keys=True)
+
+    # All of this temp file moving around and zipping stuff is
+    # taken from memory/replace/dmd/dmd.py, in mozilla-central.
+    tmpFile = tempfile.NamedTemporaryFile(delete=False)
+    tmpFilename = tmpFile.name
+    if isZipped:
+        tmpFile = gzip.GzipFile(filename='', fileobj=tmpFile)
+
+    json.dump(j, tmpFile, sort_keys=True)
+
+    shutil.move(tmpFilename, input_file_name)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        sys.stderr.write('Not enough arguments.\n')
+    if len(sys.argv) < 2:
+        sys.stderr.write('Not enough arguments: need input file names.\n')
         exit()
 
-    clamp_file_addresses(sys.argv[1], sys.argv[2])
+    clamp_file_addresses(sys.argv[1])
