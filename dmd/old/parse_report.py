@@ -5,6 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # Parse the DMD stack trace log format, post-bug 1035570, which landed in Firefox 34.
+# This does not work on the newer JSON log format.
 
 import sys
 import re
