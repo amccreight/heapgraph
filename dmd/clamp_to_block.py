@@ -152,6 +152,9 @@ def clampFileAddresses(inputFileName):
     if heapIsSampled:
         raise Exception("Heap analysis is not going to work with sampled blocks.")
 
+    if invocation['mode'] != 'contents':
+        raise Exception("Log was taken in mode " + invocation['mode'] + " not contents")
+
     blockList = j['blockList']
 
     sys.stderr.write('Creating block range list.\n')
