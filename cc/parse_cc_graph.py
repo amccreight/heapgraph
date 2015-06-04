@@ -189,7 +189,8 @@ def parseResults (f):
       else:
         km = knownPatt.match(tag)
         if km:
-          assert (not obj in knownEdges)
+          # For some reason 0x0 is in the results sometimes.
+          assert (not obj in knownEdges or obj == '0x0')
           knownEdges[obj] = int(km.group(1))
         else:
           sys.stderr.write('Error: Unknown result entry type:' + tag + '\n')
