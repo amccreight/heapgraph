@@ -28,8 +28,23 @@ class AddrRange:
         self.start = int(block, 16)
         self.length = length
 
+        assert self.start > 0
+        assert length >= 0
+
     def end(self):
         return self.start + self.length
+
+
+# Make sure there are no overlapping blocks.
+def checkBlockRanges(ranges):
+    if len(ranges) == 0:
+        return
+
+    prevRange = ranges[0]
+
+    for currRange in ranges[1:]:
+        assert prevRange.end() <= currRange.start
+        prevRange = currRange
 
 
 def loadBlockRanges(blockList):
@@ -40,37 +55,9 @@ def loadBlockRanges(blockList):
 
     ranges.sort(key=lambda r: r.start)
 
-    # Make sure there are no overlapping blocks.
-    newRanges = []
-    lastOverlapped = False
+    checkBlockRanges(ranges)
 
-    for currRange in ranges:
-        if len(newRanges) == 0:
-            newRanges.append(currRange)
-            continue
-
-        prevRange = newRanges[-1]
-        assert prevRange.start < currRange.start
-
-        if currRange.start < prevRange.end():
-            lastOverlapped = True
-            # Keep the block at the end that ends the latest.
-            if prevRange.end() < currRange.end():
-                newRanges[-1] = currRange
-        else:
-            if lastOverlapped:
-                newRanges[-1] = currRange
-            else:
-                newRanges.append(currRange)
-            lastOverlapped = False
-
-    if lastOverlapped:
-        newRanges.pop()
-        lastOverlapped = False
-
-    assert len(ranges) == len(newRanges) # Shouldn't have any overlapping blocks.
-
-    return newRanges
+    return ranges
 
 
 # Search the block ranges array for a block that address points into.
@@ -184,17 +171,14 @@ def clampFileAddresses(inputFileName):
     sys.stderr.write('Clamping block contents.\n')
     clampBlockContents(blockRanges, blockList)
 
-    sys.stderr.write('Saving file.\n')
-
     # All of this temp file moving around and zipping stuff is
     # taken from memory/replace/dmd/dmd.py, in mozilla-central.
+    sys.stderr.write('Saving file.\n')
     tmpFile = tempfile.NamedTemporaryFile(delete=False)
     tmpFilename = tmpFile.name
     if isZipped:
         tmpFile = gzip.GzipFile(filename='', fileobj=tmpFile)
-
     json.dump(j, tmpFile, sort_keys=True)
-
     shutil.move(tmpFilename, inputFileName)
 
 
