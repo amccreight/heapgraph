@@ -97,21 +97,7 @@ class ClampStats:
 
 
 # Search the block ranges array for a block that address points into.
-# |strAddress| is an address as a hex string.
-def clampAddress(blockRanges, clampStats, strAddress):
-    if strAddress == '0':
-        clampStats.nullAddr()
-        return '0'
-
-    address = int(strAddress, 16)
-
-    if address < blockRanges[0].start:
-        clampStats.clampedNonBlockAddr()
-        return '0'
-    if address > blockRanges[-1].end():
-        clampStats.clampedNonBlockAddr()
-        return '0'
-
+def clampAddress(blockRanges, clampStats, address):
     low = 0
     high = len(blockRanges) - 1
     while low <= high:
@@ -123,7 +109,7 @@ def clampAddress(blockRanges, clampStats, strAddress):
             low = mid + 1
             continue
         b = blockRanges[mid].block
-        clampStats.clampedBlockAddr(strAddress == b)
+        clampStats.clampedBlockAddr(blockRanges[mid].start == address)
         return b
 
     clampStats.clampedNonBlockAddr()
@@ -140,7 +126,22 @@ def clampBlockContents(blockRanges, blockList):
 
         cont = block['contents']
         for i in range(len(cont)):
-            cont[i] = clampAddress(blockRanges, clampStats, cont[i])
+            strAddress = cont[i]
+
+            if strAddress == '0':
+                clampStats.nullAddr()
+                continue
+
+            address = int(strAddress, 16)
+
+            # If the address is before the first block or after the last
+            # block then it can't be within a block.
+            if address < blockRanges[0].start or address > blockRanges[-1].end():
+                clampStats.clampedNonBlockAddr()
+                cont[i] = '0'
+                continue
+
+            cont[i] = clampAddress(blockRanges, clampStats, address)
 
     clampStats.log()
 
