@@ -178,8 +178,6 @@ def clampFileAddresses(inputFileName):
 
     # All of this temp file moving around and zipping stuff is
     # taken from memory/replace/dmd/dmd.py, in mozilla-central.
-    return
-
     sys.stderr.write('Saving file.\n')
     tmpFile = tempfile.NamedTemporaryFile(delete=False)
     tmpFilename = tmpFile.name
