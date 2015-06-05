@@ -93,30 +93,55 @@ def getClampedAddress(blockRanges, address):
     return None
 
 
-# An address is either already a pointer to a block,
-# a pointer into a block,
-# a non-null pointer to a block,
-# or a null pointer to a block.
-hitMiss = [0, 0, 0, 0]
+class ClampStats:
+    def __init__(self):
+        # Already pointing to the start of a block.
+        self.startBlockPtr = 0
+
+        # Pointing to the middle of a block, clamped to start.
+        self.midBlockPtr = 0
+
+        # Number of null pointers found.
+        self.nullPtr = 0
+
+        # Number of non-null pointers found that didn't point to
+        # blocks.
+        self.nonNullNonBlockPtr = 0
 
 
-def clampAddress(blockRanges, address):
+    def clampedBlockAddr(self, sameAddress):
+        if sameAddress:
+            self.startBlockPtr += 1
+        else:
+            self.midBlockPtr += 1
+
+    def clampedNonBlockAddr(self, sameAddress):
+        if sameAddress:
+            self.nullPtr += 1
+        else:
+            self.nonNullNonBlockPtr += 1
+
+    def log(self):
+        sys.stderr.write('Results:\n')
+        sys.stderr.write('  Number of pointers already pointing to start of blocks: ' + str(self.startBlockPtr) + '\n')
+        sys.stderr.write('  Number of pointers clamped to start of blocks: ' + str(self.midBlockPtr) + '\n')
+        sys.stderr.write('  Number of non-null pointers not pointing into blocks: ' + str(self.nonNullNonBlockPtr) + '\n')
+        sys.stderr.write('  Number of null pointers: ' + str(self.nullPtr) + '\n')
+
+
+def clampAddress(blockRanges, clampStats, address):
     clamped = getClampedAddress(blockRanges, address)
     if clamped:
-        if clamped == address:
-            hitMiss[0] += 1
-        else:
-            hitMiss[1] += 1
+        clampStats.clampedBlockAddr(address == clamped)
         return clamped
     else:
-        if address == '0':
-            hitMiss[3] += 1
-        else:
-            hitMiss[2] += 1
+        clampStats.clampedNonBlockAddr(address == '0')
         return '0'
 
 
 def clampBlockContents(blockRanges, blockList):
+    clampStats = ClampStats()
+
     for block in blockList:
         # Small blocks don't have any contents.
         if not 'contents' in block:
@@ -124,15 +149,11 @@ def clampBlockContents(blockRanges, blockList):
 
         newContents = []
         for address in block['contents']:
-            newContents.append(clampAddress(blockRanges, address))
+            newContents.append(clampAddress(blockRanges, clampStats, address))
 
         block['contents'] = newContents
 
-    sys.stderr.write('Results:\n')
-    sys.stderr.write('  Number of pointers already pointing to start of blocks: ' + str(hitMiss[0]) + '\n')
-    sys.stderr.write('  Number of pointers clamped to start of blocks: ' + str(hitMiss[1]) + '\n')
-    sys.stderr.write('  Number of non-null pointers not pointing into blocks: ' + str(hitMiss[2]) + '\n')
-    sys.stderr.write('  Number of null pointers: ' + str(hitMiss[3]) + '\n')
+    clampStats.log()
 
 
 def clampFileAddresses(inputFileName):
