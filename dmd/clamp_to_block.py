@@ -118,6 +118,8 @@ def clampAddress(blockRanges, clampStats, address):
 
 def clampBlockContents(blockRanges, blockList):
     clampStats = ClampStats()
+    firstAddr = blockRanges[0].start
+    lastAddr = blockRanges[-1].end()
 
     for block in blockList:
         # Small blocks don't have any contents.
@@ -136,7 +138,7 @@ def clampBlockContents(blockRanges, blockList):
 
             # If the address is before the first block or after the last
             # block then it can't be within a block.
-            if address < blockRanges[0].start or address > blockRanges[-1].end():
+            if address < firstAddr or address > lastAddr:
                 clampStats.clampedNonBlockAddr()
                 cont[i] = '0'
                 continue
