@@ -60,31 +60,6 @@ def loadBlockRanges(blockList):
     return ranges
 
 
-# Search the block ranges array for a block that address points into.
-# Address is an address as a hex string.
-def getClampedAddress(blockRanges, address):
-    address = int(address, 16)
-
-    if address < blockRanges[0].start:
-        return None
-    if address > blockRanges[-1].end():
-        return None
-
-    low = 0
-    high = len(blockRanges) - 1
-    while low <= high:
-        mid = low + (high - low) / 2
-        if address < blockRanges[mid].start:
-            high = mid - 1
-            continue
-        if address >= blockRanges[mid].end():
-            low = mid + 1
-            continue
-        return blockRanges[mid].block
-
-    return None
-
-
 class ClampStats:
     def __init__(self):
         # Already pointing to the start of a block.
@@ -121,17 +96,38 @@ class ClampStats:
         sys.stderr.write('  Number of null pointers: ' + str(self.nullPtr) + '\n')
 
 
-def clampAddress(blockRanges, clampStats, address):
-    if address == '0':
+# Search the block ranges array for a block that address points into.
+# |strAddress| is an address as a hex string.
+def clampAddress(blockRanges, clampStats, strAddress):
+    if strAddress == '0':
         clampStats.nullAddr()
         return '0'
-    clamped = getClampedAddress(blockRanges, address)
-    if clamped:
-        clampStats.clampedBlockAddr(address == clamped)
-        return clamped
-    else:
+
+    address = int(strAddress, 16)
+
+    if address < blockRanges[0].start:
         clampStats.clampedNonBlockAddr()
         return '0'
+    if address > blockRanges[-1].end():
+        clampStats.clampedNonBlockAddr()
+        return '0'
+
+    low = 0
+    high = len(blockRanges) - 1
+    while low <= high:
+        mid = low + (high - low) / 2
+        if address < blockRanges[mid].start:
+            high = mid - 1
+            continue
+        if address >= blockRanges[mid].end():
+            low = mid + 1
+            continue
+        b = blockRanges[mid].block
+        clampStats.clampedBlockAddr(strAddress == b)
+        return b
+
+    clampStats.clampedNonBlockAddr()
+    return '0'
 
 
 def clampBlockContents(blockRanges, blockList):
