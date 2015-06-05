@@ -138,11 +138,9 @@ def clampBlockContents(blockRanges, blockList):
         if not 'contents' in block:
             continue
 
-        newContents = []
-        for address in block['contents']:
-            newContents.append(clampAddress(blockRanges, clampStats, address))
-
-        block['contents'] = newContents
+        cont = block['contents']
+        for i in range(len(cont)):
+            cont[i] = clampAddress(blockRanges, clampStats, cont[i])
 
     clampStats.log()
 
