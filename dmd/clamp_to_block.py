@@ -65,6 +65,11 @@ def loadBlockRanges(blockList):
 def getClampedAddress(blockRanges, address):
     address = int(address, 16)
 
+    if address < blockRanges[0].start:
+        return None
+    if address > blockRanges[-1].end():
+        return None
+
     low = 0
     high = len(blockRanges) - 1
     while low <= high:
