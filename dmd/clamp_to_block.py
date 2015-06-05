@@ -102,11 +102,11 @@ class ClampStats:
         else:
             self.midBlockPtr += 1
 
-    def clampedNonBlockAddr(self, sameAddress):
-        if sameAddress:
-            self.nullPtr += 1
-        else:
-            self.nonNullNonBlockPtr += 1
+    def nullAddr(self):
+        self.nullPtr += 1
+
+    def clampedNonBlockAddr(self):
+        self.nonNullNonBlockPtr += 1
 
     def log(self):
         sys.stderr.write('Results:\n')
@@ -117,12 +117,15 @@ class ClampStats:
 
 
 def clampAddress(blockRanges, clampStats, address):
+    if address == '0':
+        clampStats.nullAddr()
+        return '0'
     clamped = getClampedAddress(blockRanges, address)
     if clamped:
         clampStats.clampedBlockAddr(address == clamped)
         return clamped
     else:
-        clampStats.clampedNonBlockAddr(address == '0')
+        clampStats.clampedNonBlockAddr()
         return '0'
 
 
@@ -173,6 +176,8 @@ def clampFileAddresses(inputFileName):
 
     # All of this temp file moving around and zipping stuff is
     # taken from memory/replace/dmd/dmd.py, in mozilla-central.
+    return
+
     sys.stderr.write('Saving file.\n')
     tmpFile = tempfile.NamedTemporaryFile(delete=False)
     tmpFilename = tmpFile.name
