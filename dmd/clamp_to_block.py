@@ -116,7 +116,11 @@ def clampAddress(blockRanges, blockStarts, clampStats, address):
     return r.block
 
 
-def clampBlockContents(blockRanges, blockList):
+def clampBlockList(blockList):
+    sys.stderr.write('Creating block range list.\n')
+    blockRanges = loadBlockRanges(blockList)
+
+    sys.stderr.write('Clamping block contents.\n')
     clampStats = ClampStats()
     firstAddr = blockRanges[0].start
     lastAddr = blockRanges[-1].end
@@ -164,21 +168,14 @@ def clampFileAddresses(inputFileName):
         raise Exception("'version' property isn't '{:d}'".format(outputVersion))
 
     invocation = j['invocation']
-    sampleBelowSize = invocation['sampleBelowSize']
-    heapIsSampled = sampleBelowSize > 1
-    if heapIsSampled:
+
+    if invocation['sampleBelowSize'] > 1:
         raise Exception("Heap analysis is not going to work with sampled blocks.")
 
     if invocation['mode'] != 'contents':
         raise Exception("Log was taken in mode " + invocation['mode'] + " not contents")
 
-    blockList = j['blockList']
-
-    sys.stderr.write('Creating block range list.\n')
-    blockRanges = loadBlockRanges(blockList)
-
-    sys.stderr.write('Clamping block contents.\n')
-    clampBlockContents(blockRanges, blockList)
+    clampBlockList(j['blockList'])
 
     # All of this temp file moving around and zipping stuff is
     # taken from memory/replace/dmd/dmd.py, in mozilla-central.
