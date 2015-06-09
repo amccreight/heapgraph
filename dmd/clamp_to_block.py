@@ -28,12 +28,10 @@ class AddrRange:
         self.block = block
         self.start = int(block, 16)
         self.length = length
+        self.end = self.start + self.length
 
         assert self.start > 0
         assert length >= 0
-
-    def end(self):
-        return self.start + self.length
 
 
 # Make sure there are no overlapping blocks.
@@ -44,7 +42,7 @@ def checkBlockRanges(ranges):
     prevRange = ranges[0]
 
     for currRange in ranges[1:]:
-        assert prevRange.end() <= currRange.start
+        assert prevRange.end <= currRange.start
         prevRange = currRange
 
 
@@ -109,7 +107,7 @@ def clampAddress(blockRanges, blockStarts, clampStats, address):
     r = blockRanges[i - 1]
     assert r.start <= address
 
-    if address >= r.end():
+    if address >= r.end:
         assert address < blockRanges[i].start
         clampStats.clampedNonBlockAddr()
         return '0'
@@ -121,7 +119,7 @@ def clampAddress(blockRanges, blockStarts, clampStats, address):
 def clampBlockContents(blockRanges, blockList):
     clampStats = ClampStats()
     firstAddr = blockRanges[0].start
-    lastAddr = blockRanges[-1].end()
+    lastAddr = blockRanges[-1].end
 
     blockStarts = []
     for r in blockRanges:
