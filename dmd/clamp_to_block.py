@@ -62,17 +62,18 @@ def loadBlockRanges(blockList):
 
 class ClampStats:
     def __init__(self):
-        # Already pointing to the start of a block.
+        # Number of pointers already pointing to the start of a block.
         self.startBlockPtr = 0
 
-        # Pointing to the middle of a block, clamped to start.
+        # Number of pointers pointing to the middle of a block. These
+        # are clamped to the start of the block they point into.
         self.midBlockPtr = 0
 
-        # Number of null pointers found.
+        # Number of null pointers.
         self.nullPtr = 0
 
-        # Number of non-null pointers found that didn't point to
-        # blocks.
+        # Number of non-null pointers that didn't point into the middle
+        # of any blocks. These are clamped to null.
         self.nonNullNonBlockPtr = 0
 
 
@@ -92,7 +93,7 @@ class ClampStats:
         sys.stderr.write('Results:\n')
         sys.stderr.write('  Number of pointers already pointing to start of blocks: ' + str(self.startBlockPtr) + '\n')
         sys.stderr.write('  Number of pointers clamped to start of blocks: ' + str(self.midBlockPtr) + '\n')
-        sys.stderr.write('  Number of non-null pointers not pointing into blocks: ' + str(self.nonNullNonBlockPtr) + '\n')
+        sys.stderr.write('  Number of non-null pointers not pointing into blocks clamped to null: ' + str(self.nonNullNonBlockPtr) + '\n')
         sys.stderr.write('  Number of null pointers: ' + str(self.nullPtr) + '\n')
 
 
