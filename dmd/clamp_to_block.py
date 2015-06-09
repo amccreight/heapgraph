@@ -14,6 +14,7 @@ import gzip
 import sys
 import tempfile
 import shutil
+from bisect import bisect_right
 
 
 # The DMD output version this script handles.
@@ -98,29 +99,33 @@ class ClampStats:
 
 
 # Search the block ranges array for a block that address points into.
-def clampAddress(blockRanges, clampStats, address):
-    low = 0
-    high = len(blockRanges) - 1
-    while low <= high:
-        mid = low + (high - low) / 2
-        if address < blockRanges[mid].start:
-            high = mid - 1
-            continue
-        if address >= blockRanges[mid].end():
-            low = mid + 1
-            continue
-        b = blockRanges[mid].block
-        clampStats.clampedBlockAddr(blockRanges[mid].start == address)
-        return b
+# The search is carried out in an array of starting addresses for each blocks
+# because it is faster.
+def clampAddress(blockRanges, blockStarts, clampStats, address):
+    i = bisect_right(blockStarts, address)
 
-    clampStats.clampedNonBlockAddr()
-    return '0'
+    # Any addresses completely out of the range should have been eliminated already.
+    assert i > 0
+    r = blockRanges[i - 1]
+    assert r.start <= address
+
+    if address >= r.end():
+        assert address < blockRanges[i].start
+        clampStats.clampedNonBlockAddr()
+        return '0'
+
+    clampStats.clampedBlockAddr(r.start == address)
+    return r.block
 
 
 def clampBlockContents(blockRanges, blockList):
     clampStats = ClampStats()
     firstAddr = blockRanges[0].start
     lastAddr = blockRanges[-1].end()
+
+    blockStarts = []
+    for r in blockRanges:
+        blockStarts.append(r.start)
 
     for block in blockList:
         # Small blocks don't have any contents.
@@ -144,7 +149,7 @@ def clampBlockContents(blockRanges, blockList):
                 cont[i] = '0'
                 continue
 
-            cont[i] = clampAddress(blockRanges, clampStats, address)
+            cont[i] = clampAddress(blockRanges, blockStarts, clampStats, address)
 
     clampStats.log()
 
