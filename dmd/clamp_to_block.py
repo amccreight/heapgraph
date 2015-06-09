@@ -139,7 +139,7 @@ def clampBlockContents(blockRanges, blockList):
 
             # If the address is before the first block or after the last
             # block then it can't be within a block.
-            if address < firstAddr or address > lastAddr:
+            if address < firstAddr or address >= lastAddr:
                 clampStats.clampedNonBlockAddr()
                 cont[i] = '0'
                 continue
