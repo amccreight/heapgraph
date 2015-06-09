@@ -34,31 +34,6 @@ class AddrRange:
         assert length >= 0
 
 
-# Make sure there are no overlapping blocks.
-def checkBlockRanges(ranges):
-    if len(ranges) == 0:
-        return
-
-    prevRange = ranges[0]
-
-    for currRange in ranges[1:]:
-        assert prevRange.end <= currRange.start
-        prevRange = currRange
-
-
-def loadBlockRanges(blockList):
-    ranges = []
-
-    for block in blockList:
-        ranges.append(AddrRange(block['addr'], block['req']))
-
-    ranges.sort(key=lambda r: r.start)
-
-    checkBlockRanges(ranges)
-
-    return ranges
-
-
 class ClampStats:
     def __init__(self):
         # Number of pointers already pointing to the start of a block.
@@ -118,7 +93,16 @@ def clampAddress(blockRanges, blockStarts, clampStats, address):
 
 def clampBlockList(blockList):
     sys.stderr.write('Creating block range list.\n')
-    blockRanges = loadBlockRanges(blockList)
+    blockRanges = []
+    for block in blockList:
+        blockRanges.append(AddrRange(block['addr'], block['req']))
+    blockRanges.sort(key=lambda r: r.start)
+
+    # Make sure there are no overlapping blocks.
+    prevRange = blockRanges[0]
+    for currRange in blockRanges[1:]:
+        assert prevRange.end <= currRange.start
+        prevRange = currRange
 
     sys.stderr.write('Clamping block contents.\n')
     clampStats = ClampStats()
