@@ -156,8 +156,8 @@ def clampFileAddresses(inputFileName):
     if invocation['sampleBelowSize'] > 1:
         raise Exception("Heap analysis is not going to work with sampled blocks.")
 
-    if invocation['mode'] != 'contents':
-        raise Exception("Log was taken in mode " + invocation['mode'] + " not contents")
+    if invocation['mode'] != 'scan':
+        raise Exception("Log was taken in mode " + invocation['mode'] + " not scan")
 
     clampBlockList(j['blockList'])
 
