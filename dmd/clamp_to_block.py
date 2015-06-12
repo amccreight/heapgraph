@@ -178,6 +178,14 @@ def alternateLoading(inputFileName):
     fakeJson['blockList'] = blockList
     clampBlockList(fakeJson)
 
+    def writeBlock(tmpFile, b):
+        if 'contents' in b:
+            cont = b['contents']
+            while cont and cont[-1] == '0':
+                cont.pop()
+        tmpFile.write('  ')
+        json.dump(b, tmpFile, sort_keys=True)
+
     # All of this temp file moving around and zipping stuff is
     # taken from memory/replace/dmd/dmd.py, in mozilla-central.
     sys.stderr.write('Saving file.\n')
@@ -187,11 +195,10 @@ def alternateLoading(inputFileName):
         tmpFile = gzip.GzipFile(filename='', fileobj=tmpFile)
     for l in header:
         tmpFile.write(l)
-    tmpFile.write('  ')
-    json.dump(blockList[0], tmpFile, sort_keys=True)
+    writeBlock(tmpFile, blockList[0])
     for b in blockList[1:]:
-        tmpFile.write(',\n  ')
-        json.dump(b, tmpFile, sort_keys=True)
+        tmpFile.write(',\n')
+        writeBlock(tmpFile, b)
     tmpFile.write('\n')
     for l in footer:
         tmpFile.write(l)
@@ -227,5 +234,5 @@ if __name__ == "__main__":
         sys.stderr.write('Not enough arguments: need input file names.\n')
         exit()
 
-    #alternateLoading(sys.argv[1])
-    clampFileAddresses(sys.argv[1])
+    alternateLoading(sys.argv[1])
+    #clampFileAddresses(sys.argv[1])
