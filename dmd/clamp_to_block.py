@@ -148,6 +148,56 @@ def clampBlockList(j):
     clampStats.log()
 
 
+def alternateLoading(inputFileName):
+    sys.stderr.write('Loading file.\n')
+    isZipped = inputFileName.endswith('.gz')
+    opener = gzip.open if isZipped else open
+
+    # Should probably validate the header stuff...
+    inHeader = True
+    header = []
+    inFooter = False
+    footer = []
+    blockList = []
+    with opener(inputFileName, 'rb') as inputFile:
+        for line in inputFile:
+            if inHeader:
+                header.append(line)
+                if line == " \"blockList\": [\n":
+                    inHeader = False
+            elif inFooter:
+                footer.append(line)
+            elif line == " ],\n":
+                footer.append(line)
+                inFooter = True
+            else:
+                blockList.append(json.loads(line.rstrip('\n,')))
+
+    fakeJson = {}
+    fakeJson['invocation'] = {'sampleBelowSize':1, 'mode':'scan'}
+    fakeJson['blockList'] = blockList
+    clampBlockList(fakeJson)
+
+    # All of this temp file moving around and zipping stuff is
+    # taken from memory/replace/dmd/dmd.py, in mozilla-central.
+    sys.stderr.write('Saving file.\n')
+    tmpFile = tempfile.NamedTemporaryFile(delete=False)
+    tmpFilename = tmpFile.name
+    if isZipped:
+        tmpFile = gzip.GzipFile(filename='', fileobj=tmpFile)
+    for l in header:
+        tmpFile.write(l)
+    tmpFile.write('  ')
+    json.dump(blockList[0], tmpFile, sort_keys=True)
+    for b in blockList[1:]:
+        tmpFile.write(',\n  ')
+        json.dump(b, tmpFile, sort_keys=True)
+    tmpFile.write('\n')
+    for l in footer:
+        tmpFile.write(l)
+    shutil.move(tmpFilename, inputFileName)
+
+
 def clampFileAddresses(inputFileName):
     sys.stderr.write('Loading file.\n')
     isZipped = inputFileName.endswith('.gz')
@@ -177,4 +227,5 @@ if __name__ == "__main__":
         sys.stderr.write('Not enough arguments: need input file names.\n')
         exit()
 
+    #alternateLoading(sys.argv[1])
     clampFileAddresses(sys.argv[1])
