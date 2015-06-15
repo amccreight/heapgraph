@@ -205,51 +205,41 @@ def alternateLoading(inputFileName):
     shutil.move(tmpFilename, inputFileName)
 
 
-def saveDmdJson(tmpFile, j):
-    tmpFile.write('{\n')
-    # Print the preamble.
-    tmpFile.write(' "version": {0},\n'.format(j['version']))
-    tmpFile.write(' "invocation": ')
-    json.dump(j['invocation'], tmpFile, sort_keys=True)
-    tmpFile.write(',\n')
+def prettyPrintDmdJson(out, j):
+    out.write('{\n')
 
-    # Print the block information.
-    tmpFile.write(' "blockList": [\n')
+    out.write(' "version": {0},\n'.format(j['version']))
+    out.write(' "invocation": ')
+    json.dump(j['invocation'], out, sort_keys=True)
+    out.write(',\n')
+
+    out.write(' "blockList": [')
     first = True
     for b in j['blockList']:
-        if first:
-            first = False
-        else:
-            tmpFile.write(',\n')
-        tmpFile.write('  ')
-        json.dump(b, tmpFile, sort_keys=True)
+        out.write('' if first else ',')
+        out.write('\n  ')
+        json.dump(b, out, sort_keys=True)
+        first = False
+    out.write('\n ],\n')
 
-    tmpFile.write('\n ],\n')
-
-    # traceTable
-    tmpFile.write(' "traceTable": {\n')
+    out.write(' "traceTable": {')
     first = True
     for k, l in j['traceTable'].iteritems():
-        if first:
-            first = False
-        else:
-            tmpFile.write(',\n')
-        tmpFile.write(' "{0}": {1}'.format(k, json.dumps(l)))
+        out.write('' if first else ',')
+        out.write('\n  "{0}": {1}'.format(k, json.dumps(l)))
+        first = False
+    out.write('\n },\n')
 
-    tmpFile.write('\n },\n')
-
-    # frameTable
-    tmpFile.write(' "frameTable": {\n')
+    out.write(' "frameTable": {')
     first = True
     for k, v in j['frameTable'].iteritems():
-        if first:
-            first = False
-        else:
-            tmpFile.write(',\n')
-        tmpFile.write(' "{0}": "{1}"'.format(k, v))
-    tmpFile.write('\n }\n')
+        out.write('' if first else ',')
+        out.write('\n  "{0}": "{1}"'.format(k, v))
+        first = False
+    out.write('\n }\n')
 
-    tmpFile.write('}\n')
+    out.write('}\n')
+
 
 def alternateSaving(inputFileName):
     sys.stderr.write('Loading file.\n')
@@ -272,7 +262,7 @@ def alternateSaving(inputFileName):
     if isZipped:
         tmpFile = gzip.GzipFile(filename='', fileobj=tmpFile)
 
-    saveDmdJson(tmpFile, j)
+    prettyPrintDmdJson(tmpFile, j)
 
     shutil.move(tmpFilename, inputFileName)
 
