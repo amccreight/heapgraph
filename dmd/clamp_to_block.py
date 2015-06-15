@@ -145,6 +145,10 @@ def clampBlockList(j):
 
             cont[i] = clampAddress(blockRanges, blockStarts, clampStats, address)
 
+        # Remove any trailing nulls.
+        while len(cont) and cont[-1] == '0':
+            cont.pop()
+
     clampStats.log()
 
 
@@ -179,10 +183,6 @@ def alternateLoading(inputFileName):
     clampBlockList(fakeJson)
 
     def writeBlock(tmpFile, b):
-        if 'contents' in b:
-            cont = b['contents']
-            while cont and cont[-1] == '0':
-                cont.pop()
         tmpFile.write('  ')
         json.dump(b, tmpFile, sort_keys=True)
 
