@@ -205,6 +205,78 @@ def alternateLoading(inputFileName):
     shutil.move(tmpFilename, inputFileName)
 
 
+def saveDmdJson(tmpFile, j):
+    tmpFile.write('{\n')
+    # Print the preamble.
+    tmpFile.write(' "version": {0},\n'.format(j['version']))
+    tmpFile.write(' "invocation": ')
+    json.dump(j['invocation'], tmpFile, sort_keys=True)
+    tmpFile.write(',\n')
+
+    # Print the block information.
+    tmpFile.write(' "blockList": [\n')
+    first = True
+    for b in j['blockList']:
+        if first:
+            first = False
+        else:
+            tmpFile.write(',\n')
+        tmpFile.write('  ')
+        json.dump(b, tmpFile, sort_keys=True)
+
+    tmpFile.write('\n ],\n')
+
+    # traceTable
+    tmpFile.write(' "traceTable": {\n')
+    first = True
+    for k, l in j['traceTable'].iteritems():
+        if first:
+            first = False
+        else:
+            tmpFile.write(',\n')
+        tmpFile.write(' "{0}": {1}'.format(k, json.dumps(l)))
+
+    tmpFile.write('\n },\n')
+
+    # frameTable
+    tmpFile.write(' "frameTable": {\n')
+    first = True
+    for k, v in j['frameTable'].iteritems():
+        if first:
+            first = False
+        else:
+            tmpFile.write(',\n')
+        tmpFile.write(' "{0}": "{1}"'.format(k, v))
+    tmpFile.write('\n }\n')
+
+    tmpFile.write('}\n')
+
+def alternateSaving(inputFileName):
+    sys.stderr.write('Loading file.\n')
+    isZipped = inputFileName.endswith('.gz')
+    opener = gzip.open if isZipped else open
+
+    with opener(inputFileName, 'rb') as f:
+        j = json.load(f)
+
+    if j['version'] != outputVersion:
+        raise Exception("'version' property isn't '{:d}'".format(outputVersion))
+
+    clampBlockList(j)
+
+    # All of this temp file moving around and zipping stuff is
+    # taken from memory/replace/dmd/dmd.py, in mozilla-central.
+    sys.stderr.write('Saving file.\n')
+    tmpFile = tempfile.NamedTemporaryFile(delete=False)
+    tmpFilename = tmpFile.name
+    if isZipped:
+        tmpFile = gzip.GzipFile(filename='', fileobj=tmpFile)
+
+    saveDmdJson(tmpFile, j)
+
+    shutil.move(tmpFilename, inputFileName)
+
+
 def clampFileAddresses(inputFileName):
     sys.stderr.write('Loading file.\n')
     isZipped = inputFileName.endswith('.gz')
@@ -234,5 +306,6 @@ if __name__ == "__main__":
         sys.stderr.write('Not enough arguments: need input file names.\n')
         exit()
 
-    alternateLoading(sys.argv[1])
+    alternateSaving(sys.argv[1])
+    #alternateLoading(sys.argv[1])
     #clampFileAddresses(sys.argv[1])
