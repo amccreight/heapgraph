@@ -205,7 +205,6 @@ def cleanupTraceTable(args, frameTable, traceTable):
 
 
 def loadGraph(options):
-    sys.stderr.write('Loading file.\n')
     # Handle gzipped input if necessary.
     isZipped = options.dmd_log_file_name.endswith('.gz')
     opener = gzip.open if isZipped else open
