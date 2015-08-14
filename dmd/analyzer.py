@@ -68,7 +68,7 @@ def range_1_24(string):
 
 parser = argparse.ArgumentParser(description='Analyze the heap graph to find out things about an object.')
 
-parser.add_argument('file_name',
+parser.add_argument('dmd_log_file_name',
                     help='clamped DMD log file name')
 
 parser.add_argument('block',
@@ -76,7 +76,11 @@ parser.add_argument('block',
 
 parser.add_argument('--referrers', dest='referrers', action='store_true',
                     default=False,
-                    help='Print out information about blocks holding onto the object. (default)')
+                    help='Print out information about blocks that point to the given block. (default)')
+
+parser.add_argument('--info', dest='info', action='store_true',
+                    default=False,
+                    help='Print out information about the block.')
 
 parser.add_argument('--stack-frame-length', '-sfl', type=int,
                     default=150,
@@ -159,6 +163,22 @@ def show_referrers(args, blocks, stacks, block):
             break
 
 
+def show_block_info(args, blocks, stacks, block):
+    b = blocks[block]
+    sys.stdout.write('block: 0x{}\n'.format(b.addr))
+    sys.stdout.write('requested size: {} bytes\n'.format(b.req_size))
+    sys.stdout.write('\n')
+    sys.stdout.write('block contents: ')
+    for c in b.contents:
+        v = '0' if c == 0 else blocks[c].addr
+        sys.stdout.write('0x{} '.format(v))
+    sys.stdout.write('\n\n')
+    sys.stdout.write('allocation stack:\n')
+    print_trace_segment(args, stacks, b)
+    return
+
+
+
 def cleanupTraceTable(args, frameTable, traceTable):
     # Remove allocation functions at the start of traces.
     if args.ignore_alloc_fns:
@@ -187,10 +207,10 @@ def cleanupTraceTable(args, frameTable, traceTable):
 def loadGraph(options):
     sys.stderr.write('Loading file.\n')
     # Handle gzipped input if necessary.
-    isZipped = options.file_name.endswith('.gz')
+    isZipped = options.dmd_log_file_name.endswith('.gz')
     opener = gzip.open if isZipped else open
 
-    with opener(options.file_name, 'rb') as f:
+    with opener(options.dmd_log_file_name, 'rb') as f:
         j = json.load(f)
 
     if j['version'] != outputVersion:
@@ -226,6 +246,10 @@ def analyzeLogs():
     if not block in blocks:
         print 'Object', block, 'not found in traces.'
         print 'It could still be the target of some nodes.'
+        return
+
+    if options.info:
+        show_block_info(options, blocks, stacks, block)
         return
 
     show_referrers(options, blocks, stacks, block)
