@@ -130,6 +130,8 @@ def print_trace_segment(args, stacks, block):
 def show_referrers(args, blocks, stacks, block):
     visited = set([])
 
+    anyFound = False
+
     while True:
         referrers = {}
 
@@ -138,6 +140,7 @@ def show_referrers(args, blocks, stacks, block):
             for e in data.contents:
                 if e == block:
                     referrers.setdefault(b, []).append(8 * which_edge)
+                    anyFound = True
                 which_edge += 1
 
         for r in referrers:
@@ -166,6 +169,8 @@ def show_referrers(args, blocks, stacks, block):
         else:
             break
 
+    if not anyFound:
+        print 'No referrers found.'
 
 def show_block_info(args, blocks, stacks, block):
     b = blocks[block]
