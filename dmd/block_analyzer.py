@@ -144,7 +144,7 @@ def show_referrers(args, blocks, stacks, block):
                 which_edge += 1
 
         for r in referrers:
-            print blocks[r].addr, 'size =', blocks[r].req_size,
+            sys.stdout.write('0x{} size = {} bytes'.format(blocks[r].addr, blocks[r].req_size))
             plural = 's' if len(referrers[r]) > 1 else ''
             sys.stdout.write(' at byte offset' + plural + ' ' + (', '.join(str(x) for x in referrers[r])))
             print
