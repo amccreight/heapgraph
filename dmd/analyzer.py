@@ -112,6 +112,13 @@ class BlockData:
         self.alloc_stack = json_block['alloc']
 
 
+def print_trace_segment(args, stacks, block):
+    (traceTable, frameTable) = stacks
+
+    for l in traceTable[block.alloc_stack]:
+        print ' ', frameTable[l][5:args.stack_frame_length]
+
+
 def show_referrers(args, blocks, stacks, block):
     visited = set([])
 
