@@ -5,7 +5,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-# Try to find out something useful about a particular object.
+# From a scan mode DMD log, extract some information about a
+# particular block, such as its allocation stack or which other blocks
+# contain pointers to it. This can be useful when investigating leaks
+# caused by unknown references to refcounted objects.
+
 
 import json
 import gzip
