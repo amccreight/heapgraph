@@ -78,11 +78,6 @@ parser.add_argument('--referrers', dest='referrers', action='store_true',
                     default=False,
                     help='Print out information about blocks holding onto the object. (default)')
 
-# XXX not updated yet
-#parser.add_argument('--flood-graph', dest='flood_graph', action='store_true',
-#                    default=False,
-#                    help='Print out blocks reachable from a particular block.')
-
 parser.add_argument('--stack-frame-length', '-sfl', type=int,
                     default=150,
                     help='Number of characters to print from each stack frame')
@@ -115,52 +110,6 @@ class BlockData:
         self.req_size = json_block['req']
 
         self.alloc_stack = json_block['alloc']
-
-
-def flood_graph(start, edges):
-    visited_order = []
-    visited = set([start])
-    work_list = [start]
-    ids = {}
-    num_visited = 0
-
-    while len(work_list) != 0:
-        x = work_list.pop()
-        visited_order.append(x)
-        num_visited += 1
-        ids[x] = num_visited
-        assert(x in visited)
-        if not x in edges:
-            continue
-
-        for e in edges[x]:
-            if e in visited:
-                continue
-            visited.add(e)
-            work_list.append(e)
-
-    return [visited_order, ids]
-
-
-def print_trace_segment(args, stacks, block):
-    (traceTable, frameTable) = stacks
-
-    for l in traceTable[block.alloc_stack]:
-        print ' ', frameTable[l][5:args.stack_frame_length]
-
-
-def show_flood_graph(args, block_edges, traces, req_sizes, block):
-    [reachable, ids] = flood_graph(block, block_edges)
-
-    for r in reachable:
-        edge_ids = []
-        for e in block_edges.get(r, set([])):
-            edge_ids.append(str(ids[e]))
-        edge_ids = sorted(edge_ids)
-
-        print str(ids[r]), 'addr=', r, 'size=', req_sizes[r], ' -->', ', '.join(edge_ids)
-        print_trace_segment(args, traces, r)
-        print
 
 
 def show_referrers(args, blocks, stacks, block):
@@ -271,10 +220,6 @@ def analyzeLogs():
         print 'Object', block, 'not found in traces.'
         print 'It could still be the target of some nodes.'
         return
-
-    #if options.flood_graph:
-    #    show_flood_graph(options, block_edges, traces, req_sizes, block)
-    #    return
 
     show_referrers(options, blocks, stacks, block)
 
