@@ -6,6 +6,7 @@
 
 import copy
 import sys
+from collections import deque
 from collections import namedtuple
 import parse_cc_graph
 import argparse
@@ -204,6 +205,136 @@ def printPath(args, knownEdgesFn, ga, num_known, roots, path):
 
 
 ########################################################
+# Breadth-first shortest path finding.
+########################################################
+
+def findRootsBFS(args, g, ga, num_known, roots, target):
+  workList = deque()
+  distances = {}
+  limit = -1
+
+  def traverseWeakMapEntry(dist, k, m, v, lbl):
+    if not k in distances or not m in distances:
+      # Haven't found either the key or map yet.
+      return
+
+    if distances[k][0] > dist or distances[m][0] > dist:
+      # Either the key or the weak map is farther away, so we
+      # must wait for the farther one before processing it.
+      return
+
+    if v in distances:
+      assert distances[v][0] <= dist + 1
+      return
+
+    distances[v] = (dist + 1, k, m, lbl)
+    workList.append(v)
+
+
+  # For now, ignore keyDelegates.
+  weakData = {}
+  # FIXME is this in a different format in the CC parser?
+  #for wme in ga.weakMapEntries:
+  #  weakData.setdefault(wme.weakMap, set([])).add(wme)
+  #  weakData.setdefault(wme.key, set([])).add(wme)
+  #  if wme.keyDelegate != '0x0':
+  #    weakData.setdefault(wme.keyDelegate, set([])).add(wme)
+
+  # Create a fake start object that points to the roots and
+  # add it to the graph.
+  startObject = 'FAKE START OBJECT'
+  rootEdges = set([])
+  for r in roots:
+    rootEdges.add(r)
+
+  assert not startObject in g
+  g[startObject] = rootEdges
+  distances[startObject] = (-1, None)
+  workList.append(startObject)
+
+  # Search the graph.
+  while workList:
+    x = workList.popleft()
+    dist = distances[x][0]
+
+    # Check the monotonicity of workList.
+    assert dist >= limit
+    limit = dist
+
+    if x == target:
+      # Found target: nothing to do?
+      # This will just find the shortest path to the object.
+      continue
+
+    if not x in g:
+      # x does not point to any other nodes.
+      continue
+
+    newDist = dist + 1
+    newDistNode = (newDist, x)
+
+    for y in g[x]:
+      if y in distances:
+        assert distances[y][0] <= newDist
+      else:
+        distances[y] = newDistNode
+        workList.append(y)
+
+    if x in weakData:
+      for wme in weakData[x]:
+        assert x == wme.weakMap or x == wme.key or x == wme.keyDelegate
+        traverseWeakMapEntry(dist, wme.key, wme.weakMap, wme.value, "value in weak map " + wme.weakMap)
+        traverseWeakMapEntry(dist, wme.keyDelegate, wme.weakMap, wme.key, "key delegate in weak map " + wme.weakMap)
+
+
+  # Print out the paths by unwinding backwards to generate a path,
+  # then print the path. Accumulate any weak maps found during this
+  # process into the printWorkList queue, and print out what keeps
+  # them alive. Only print out why each map is alive once.
+  printWorkList = deque()
+  printWorkList.append(target)
+  printedThings = set([target])
+
+  while printWorkList:
+    p = printWorkList.popleft()
+    path = []
+    while p in distances:
+      path.append(p)
+      dist = distances[p]
+      if len(dist) == 2:
+        [_, p] = dist
+      else:
+        # The weak map key is probably more interesting,
+        # so follow it, and worry about the weak map later.
+        [_, k, m, lbl] = dist
+
+        ga.edgeLabels[k].setdefault(p, []).append(lbl)
+        p = k
+        # FIXME Add this hide_weak_maps argument option...
+        if not m in printedThings and not args.hide_weak_maps:
+          printWorkList.append(m)
+          printedThings.add(m)
+
+    if path:
+      assert(path[-1] == startObject)
+      path.pop()
+      path.reverse()
+
+      print
+
+      def knownEdgesFn(node):
+        knownEdges = []
+        for src, dsts in g.iteritems():
+          if node in dsts and src != startObject:
+            knownEdges.append(src)
+        return knownEdges
+      printPath(args, knownEdgesFn, ga, num_known, roots, path)
+    else:
+      print 'Didn\'t find a path.'
+  return
+
+
+########################################################
 # Depth-first path finding in a reverse graph.
 ########################################################
 
@@ -244,7 +375,7 @@ def pretendAboutWeakMaps(args, g, ga):
 
 # Look for roots and print out the paths to the given object.
 # This works by reversing the graph, then flooding to find roots.
-def findRootsDFS (args, g, ga, num_known, roots, x):
+def findRootsDFS(args, g, ga, num_known, roots, x):
   if args.weak_maps or args.weak_maps_maps_live:
     pretendAboutWeakMaps(args, g, ga)
 
@@ -371,6 +502,7 @@ def findCCRoots():
 
   for a in targs:
     if a in g:
+      #findRootsBFS(args, g, ga, res[0], roots, a)
       findRootsDFS(args, g, ga, res[0], roots, a)
     else:
       sys.stderr.write('{0} is not in the graph.\n'.format(a))
