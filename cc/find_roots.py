@@ -196,8 +196,23 @@ def print_roots_only_path(f, x, path):
   f.write('\n')
 
 
-# look for roots and print out the paths to the given object
-def findRootsDFS (args, revg, ga, num_known, roots, x):
+########################################################
+# Depth-first path finding in a reverse graph.
+########################################################
+
+def reverseGraph (g):
+  g2 = {}
+  sys.stderr.write('Reversing graph. ')
+  for src, dsts in g.iteritems():
+    for d in dsts:
+      g2.setdefault(d, set([])).add(src)
+  sys.stderr.write('Done.\n\n')
+  return g2
+
+# Look for roots and print out the paths to the given object.
+# This works by reversing the graph, then flooding to find roots.
+def findRootsDFS (args, g, ga, num_known, roots, x):
+  revg = reverseGraph(g)
   visited = set([])
   path = []
   anyFound = [False]
@@ -244,15 +259,9 @@ def findRootsDFS (args, revg, ga, num_known, roots, x):
     print_known_edges(args, revg, ga, x)
 
 
-def reverseGraph (g):
-  g2 = {}
-  sys.stderr.write('Reversing graph. ')
-  for src, dsts in g.iteritems():
-    for d in dsts:
-      g2.setdefault(d, set([])).add(src)
-  sys.stderr.write('Done.\n\n')
-  return g2
-
+########################################################
+# Top-level file and target selection
+########################################################
 
 def loadGraph(fname):
   sys.stderr.write ('Parsing {0}. '.format(fname))
@@ -347,8 +356,6 @@ def findCCRoots():
     pretendAboutWeakMaps(args, g, ga)
 
   roots = selectRoots(args, g, ga, res)
-  revg = reverseGraph(g)
-
   targs = selectTargets(g, ga, args.target)
 
   if args.output_to_file:
@@ -358,7 +365,7 @@ def findCCRoots():
 
   for a in targs:
     if a in g:
-      findRootsDFS(args, revg, ga, res[0], roots, a)
+      findRootsDFS(args, g, ga, res[0], roots, a)
     else:
       sys.stderr.write('{0} is not in the graph.\n'.format(a))
 
