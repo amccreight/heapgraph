@@ -228,9 +228,32 @@ def reverseGraphKnownEdges(revg, target):
     known.append(x)
   return known
 
+def pretendAboutWeakMaps(args, g, ga):
+  for (m, k, kd, v) in ga.weakMapEntries:
+    if m and not args.weak_maps_maps_live:
+      continue
+    if kd:
+      continue
+    if not k:
+      continue
+    if not v:
+      continue
+
+    g[k].add(v)
+
+    if m:
+      edgeLabel = 'weak map key-value edge in map ' + m
+    else:
+      edgeLabel = 'weak map key-value edge in black map'
+
+    ga.edgeLabels[k].setdefault(v, []).append(edgeLabel)
+
 # Look for roots and print out the paths to the given object.
 # This works by reversing the graph, then flooding to find roots.
 def findRootsDFS (args, g, ga, num_known, roots, x):
+  if args.weak_maps or args.weak_maps_maps_live:
+    pretendAboutWeakMaps(args, g, ga)
+
   revg = reverseGraph(g)
   visited = set([])
   path = []
@@ -336,34 +359,10 @@ def selectTargets (g, ga, target):
   return targs
 
 
-def pretendAboutWeakMaps(args, g, ga):
-  for (m, k, kd, v) in ga.weakMapEntries:
-    if m and not args.weak_maps_maps_live:
-      continue
-    if kd:
-      continue
-    if not k:
-      continue
-    if not v:
-      continue
-
-    g[k].add(v)
-
-    if m:
-      edgeLabel = 'weak map key-value edge in map ' + m
-    else:
-      edgeLabel = 'weak map key-value edge in black map'
-
-    ga.edgeLabels[k].setdefault(v, []).append(edgeLabel)
-
-
 def findCCRoots():
   args = parser.parse_args()
 
   (g, ga, res) = loadGraph (args.file_name)
-
-  if args.weak_maps or args.weak_maps_maps_live:
-    pretendAboutWeakMaps(args, g, ga)
 
   roots = selectRoots(args, g, ga, res)
   targs = selectTargets(g, ga, args.target)
