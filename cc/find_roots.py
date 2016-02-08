@@ -197,12 +197,12 @@ def print_roots_only_path(f, x, path):
 
 
 # look for roots and print out the paths to the given object
-def findRoots (args, revg, ga, num_known, roots, x):
+def findRootsDFS (args, revg, ga, num_known, roots, x):
   visited = set([])
   path = []
   anyFound = [False]
 
-  def findRootsDFS (y):
+  def findRootsInner (y):
     if y in visited:
       return False
     visited.add(y)
@@ -228,7 +228,7 @@ def findRoots (args, revg, ga, num_known, roots, x):
       path.append(None)
       for z in revg[y]:
         path[-1] = (z, y)
-        if findRootsDFS(z):
+        if findRootsInner(z):
           return True
       path.pop()
     return False
@@ -237,7 +237,7 @@ def findRoots (args, revg, ga, num_known, roots, x):
     sys.stdout.write ('No other nodes point to {0} and it is not a root.\n\n'.format(x))
     return
 
-  findRootsDFS(x)
+  findRootsInner(x)
 
   if not anyFound[0] and not args.print_roots_only:
     print 'No roots found for', x
@@ -358,7 +358,7 @@ def findCCRoots():
 
   for a in targs:
     if a in g:
-      findRoots(args, revg, ga, res[0], roots, a)
+      findRootsDFS(args, revg, ga, res[0], roots, a)
     else:
       sys.stderr.write('{0} is not in the graph.\n'.format(a))
 
