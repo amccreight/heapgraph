@@ -168,7 +168,7 @@ def print_simple_node (ga, x):
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
 # paths.
-def print_simple_path (args, revg, ga, roots, x, path):
+def print_simple_path(args, ga, x, path):
   for p in path:
     print_simple_node(ga, p[0])
     sys.stdout.write(' ')
@@ -178,7 +178,7 @@ def print_simple_path (args, revg, ga, roots, x, path):
   print
 
 
-def print_reverse_simple_path (args, revg, ga, roots, x, path):
+def print_reverse_simple_path(args, ga, x, path):
   print_simple_node(ga, x)
   for p in path:
     sys.stdout.write(' ')
@@ -227,10 +227,10 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
         print_roots_only_path(args.output_file, x, path)
       elif args.simple_path:
         if args.print_reverse:
-          print_reverse_simple_path(args, revg, ga, roots, x, path)
+          print_reverse_simple_path(args, ga, x, path)
         else:
           path.reverse()
-          print_simple_path(args, revg, ga, roots, x, path)
+          print_simple_path(args, ga, x, path)
           path.reverse()
       else:
         path.reverse()
