@@ -45,6 +45,7 @@ from collections import namedtuple
 
 GraphAttribs = namedtuple('GraphAttribs',
                           'edgeLabels nodeLabels rcNodes gcNodes xpcRoots purpRoots weakMapEntries incrRoots')
+WeakMapEntry = namedtuple('WeakMapEntry', 'weakMap key keyDelegate value')
 
 
 # experimental support for parsing purple roots
@@ -62,11 +63,6 @@ incrRootPatt = re.compile('IncrementalRoot ([a-zA-Z0-9]+)\r?$')
 
 
 checkForDoubleLogging = True
-
-def nullToNone(s):
-  if s == '0x0':
-    return None
-  return s
 
 
 # parse CC graph
@@ -149,12 +145,8 @@ def parseGraph (f, rootCounts):
       else:
         wmem = weakMapEntryPatt.match(l)
         if wmem:
-          m = nullToNone(wmem.group(1))
-          k = nullToNone(wmem.group(2))
-          kd = nullToNone(wmem.group(3))
-          v = nullToNone(wmem.group(4))
-          assert(v != '0x0' and v != '(nil)')
-          weakMapEntries.append((m, k, kd, v))
+          weakMapEntries.append(WeakMapEntry(weakMap=wmem.group(1), key=wmem.group(2),
+                                             keyDelegate=wmem.group(3), value=wmem.group(4)))
         else:
           iroot = incrRootPatt.match(l)
           if iroot:

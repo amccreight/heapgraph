@@ -236,12 +236,11 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
 
   # For now, ignore keyDelegates.
   weakData = {}
-  # FIXME is this in a different format in the CC parser?
-  #for wme in ga.weakMapEntries:
-  #  weakData.setdefault(wme.weakMap, set([])).add(wme)
-  #  weakData.setdefault(wme.key, set([])).add(wme)
-  #  if wme.keyDelegate != '0x0':
-  #    weakData.setdefault(wme.keyDelegate, set([])).add(wme)
+  for wme in ga.weakMapEntries:
+    weakData.setdefault(wme.weakMap, set([])).add(wme)
+    weakData.setdefault(wme.key, set([])).add(wme)
+    if wme.keyDelegate != '0x0':
+      weakData.setdefault(wme.keyDelegate, set([])).add(wme)
 
   # Create a fake start object that points to the roots and
   # add it to the graph.
@@ -356,7 +355,17 @@ def reverseGraphKnownEdges(revg, target):
   return known
 
 def pretendAboutWeakMaps(args, g, ga):
-  for (m, k, kd, v) in ga.weakMapEntries:
+  def nullToNone(s):
+    if s == '0x0':
+      return None
+    return s
+
+  for wme in ga.weakMapEntries:
+    m = nullToNone(wme.weakMap)
+    k = nullToNone(wme.key)
+    kd = nullToNone(wme.keyDelegate)
+    v = nullToNone(wme.value)
+
     if m and not args.weak_maps_maps_live:
       continue
     if kd:
