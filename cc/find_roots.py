@@ -89,6 +89,9 @@ def print_edge (args, ga, x, y):
 
   if args.print_reverse:
     sys.stdout.write('<--[')
+    temp = x
+    x = y
+    y = temp
   else:
     sys.stdout.write('--[')
 
@@ -148,19 +151,22 @@ def explainRoot(args, knownEdgesFn, ga, num_known, roots, root):
 
 
 # print out the path to an object that has been discovered
-def printPathBasic(args, knownEdgesFn, ga, num_known, roots, x, path):
-  for p in path:
-    print_node(ga, p[0])
-    sys.stdout.write('\n    ')
-    print_edge(args, ga, p[0], p[1])
+def printPathBasic(args, knownEdgesFn, ga, num_known, roots, path):
+  print_node(ga, path[0])
+  sys.stdout.write('\n')
+  prev = path[0]
+
+  for p in path[1:]:
+    sys.stdout.write('    ')
+    print_edge(args, ga, prev, p)
     sys.stdout.write(' ')
-  print_node(ga, x)
+    print_node(ga, p)
+    sys.stdout.write('\n')
+    prev = p
+
   print
-  print
-  if path == []:
-    explainRoot(args, knownEdgesFn, ga, num_known, roots, x)
-  else:
-    explainRoot(args, knownEdgesFn, ga, num_known, roots, path[0][0])
+
+  explainRoot(args, knownEdgesFn, ga, num_known, roots, path[0])
   print
 
 def print_simple_node (ga, x):
@@ -169,42 +175,32 @@ def print_simple_node (ga, x):
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
 # paths.
-def print_simple_path(args, ga, x, path):
-  for p in path:
-    print_simple_node(ga, p[0])
+def print_simple_path(args, ga, path):
+  print_simple_node(ga, path[0])
+  prev = path[0]
+
+  for p in path[1:]:
     sys.stdout.write(' ')
-    print_edge(args, ga, p[0], p[1])
+    print_edge(args, ga, prev, p)
     sys.stdout.write(' ')
-  print_simple_node(ga, x)
+    print_simple_node(ga, p)
+    prev = p
+
   print
 
-def print_reverse_simple_path(args, ga, x, path):
-  print_simple_node(ga, x)
-  for p in path:
-    sys.stdout.write(' ')
-    print_edge(args, ga, p[0], p[1])
-    sys.stdout.write(' ')
-    print_simple_node(ga, p[0])
-  print
-
-def print_roots_only_path(f, x, path):
-  if len(path) != 0:
-    f.write(path[0][0])
-  else:
-    f.write(x)
+def print_roots_only_path(f, path):
+  f.write(path[0])
   f.write('\n')
 
-def printPath(args, knownEdgesFn, ga, num_known, roots, x, path):
+def printPath(args, knownEdgesFn, ga, num_known, roots, path):
   if args.print_roots_only:
-    print_roots_only_path(args.output_file, x, path)
+    print_roots_only_path(args.output_file, path)
   elif args.simple_path:
     if args.print_reverse:
       path.reverse()
-      print_reverse_simple_path(args, ga, x, path)
-    else:
-      print_simple_path(args, ga, x, path)
+    print_simple_path(args, ga, path)
   else:
-    printPathBasic(args, knownEdgesFn, ga, num_known, roots, x, path)
+    printPathBasic(args, knownEdgesFn, ga, num_known, roots, path)
 
 
 ########################################################
@@ -267,14 +263,15 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
         return reverseGraphKnownEdges(revg, node)
       path = copy.copy(revPath)
       path.reverse()
-      printPath(args, knownEdgesFn, ga, num_known, roots, x, path)
+      path.append(x)
+      printPath(args, knownEdgesFn, ga, num_known, roots, path)
       anyFound[0] = True
     else:
       if not y in revg:
         return False
       revPath.append(None)
       for z in revg[y]:
-        revPath[-1] = (z, y)
+        revPath[-1] = z
         if findRootsInner(z):
           return True
       revPath.pop()
