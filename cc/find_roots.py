@@ -76,6 +76,10 @@ parser.add_argument('--weak-maps-maps-live', dest='weak_maps_maps_live', action=
                     default=False,
                     help='Pretend all weak maps are alive in DFS mode. Implies --weak-maps. WARNING: this may not give accurate results.')
 
+parser.add_argument('--depth-first', '-dfs', dest='use_dfs', action='store_true',
+                    default=False,
+                    help='Use the old depth-first algorithm for finding paths.')
+
 parser.add_argument('--hide-weak-maps', '-hwm', dest='hide_weak_maps', action='store_true',
                     default=False,
                     help='If selected, don\'t show why any weak maps in the path are alive.')
@@ -513,8 +517,11 @@ def findCCRoots():
 
   for a in targs:
     if a in g:
-      #findRootsBFS(args, g, ga, res[0], roots, a)
-      findRootsDFS(args, g, ga, res[0], roots, a)
+      if args.use_dfs:
+        findRootsDFS(args, g, ga, res[0], roots, a)
+      else:
+        print
+        findRootsBFS(args, g, ga, res[0], roots, a)
     else:
       sys.stderr.write('{0} is not in the graph.\n'.format(a))
 
