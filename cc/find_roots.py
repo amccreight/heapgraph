@@ -147,7 +147,7 @@ def explainRoot(args, knownEdgesFn, ga, num_known, roots, root):
 
 
 # print out the path to an object that has been discovered
-def printPath(args, knownEdgesFn, ga, num_known, roots, x, path):
+def printPathBasic(args, knownEdgesFn, ga, num_known, roots, x, path):
   for p in path:
     print_node(ga, p[0])
     sys.stdout.write('\n    ')
@@ -245,7 +245,7 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
           path.reverse()
       else:
         path.reverse()
-        printPath(args, knownEdgesFn, ga, num_known, roots, x, path)
+        printPathBasic(args, knownEdgesFn, ga, num_known, roots, x, path)
         path.reverse()
       anyFound[0] = True
     else:
