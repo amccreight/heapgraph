@@ -105,14 +105,16 @@ def print_edge (args, ga, x, y):
 
 
 def print_known_edges(args, revg, ga, x):
-  if x in revg:
-    print '    known edges:'
-    for e in revg[x]:
-      print '       ',
-      print_node(ga, e)
-      print ' ',
-      print_edge(args, ga, e, x)
-      sys.stdout.write (' {0}\n'.format(x))
+  if not x in revg:
+    return
+
+  print '    known edges:'
+  for e in revg[x]:
+    print '       ',
+    print_node(ga, e)
+    print ' ',
+    print_edge(args, ga, e, x)
+    sys.stdout.write (' {0}\n'.format(x))
 
 
 # explain why a root is a root
