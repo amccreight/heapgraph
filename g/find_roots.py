@@ -55,7 +55,7 @@ parser.add_argument('--string-mode', '-sm', dest='string_mode', action='store_tr
 
 parser.add_argument('--depth-first', '-dfs', dest='use_dfs', action='store_true',
                     default=False,
-                    help='Use the old breadth-first algorithm for finding paths.')
+                    help='Use the old depth-first algorithm for finding paths.')
 
 parser.add_argument('--hide-weak-maps', '-hwm', dest='hide_weak_maps', action='store_true',
                     default=False,
