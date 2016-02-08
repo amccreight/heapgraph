@@ -307,54 +307,6 @@ def printResults(r):
     sys.stdout.write('{0}, '.format(x))
   print
 
-# XXX This function isn't really right, as you only want to add these edges
-# when you already know that, say, m and k are definitely alive.  I'm not sure
-# how to go about doing that.
-# Add the reversed edges induced by the weak map entries to the graph g.
-# As a bit of a hack, if there's an entry with say map m, key k and value v
-# (ignoring delegates for the moment) then in the reversed graph this sort of acts
-# like there's an edge from v to m and an edge from v to k.  The standard flooding
-# algorithm should produce sensical results from this reversed graph.  Each such reversed
-# "weak" edge includes the name of the other node in the pair, if it is explicitly present.
-def addReversedWeakEdges(g, ga):
-  for (m, k, kd, v) in ga.weakMapEntries:
-    assert(m or k or kd)
-    assert(v)
-
-    # If m and kd are alive, then k is alive.
-    if m and k:
-      g.setdefault(k, set([])).add(m)
-      if kd:
-        delegateName = 'key delegate ' + kd
-      else:
-        delegateName = 'black key delegate'
-      ga.edgeLabels[m].setdefault(k, []).append('weak map along with ' + delegateName)
-
-    if kd and k:
-      g.setdefault(k, set([])).add(kd)
-      if m:
-        mapName = 'weak map ' + m
-      else:
-        mapName = 'black weak map'
-      ga.edgeLabels[kd].setdefault(k, []).append('key delegate along with ' + mapName)
-
-    # If m and k are alive, then v is alive.
-    if m:
-      g.setdefault(v, set([])).add(m)
-      if k:
-        keyName = 'key ' + k
-      else:
-        keyName = 'black key'
-      ga.edgeLabels[m].setdefault(v, []).append('weak map along with ' + keyName)
-
-    if k:
-      g.setdefault(v, set([])).add(k)
-      if m:
-        mapName = 'weak map ' + m
-      else:
-        mapName = 'black weak map'
-      ga.edgeLabels[k].setdefault(v, []).append('key along with ' + mapName)
-
 
 if False:
   # A few simple tests
