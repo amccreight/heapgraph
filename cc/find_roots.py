@@ -4,6 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import copy
 import sys
 from collections import namedtuple
 import parse_cc_graph
@@ -200,7 +201,6 @@ def printPath(args, knownEdgesFn, ga, num_known, roots, x, path):
     if args.print_reverse:
       path.reverse()
       print_reverse_simple_path(args, ga, x, path)
-      path.reverse()
     else:
       print_simple_path(args, ga, x, path)
   else:
@@ -254,7 +254,7 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
 
   revg = reverseGraph(g)
   visited = set([])
-  path = []
+  revPath = []
   anyFound = [False]
 
   def findRootsInner (y):
@@ -265,19 +265,19 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
     if y in roots:
       def knownEdgesFn(node):
         return reverseGraphKnownEdges(revg, node)
+      path = copy.copy(revPath)
       path.reverse()
       printPath(args, knownEdgesFn, ga, num_known, roots, x, path)
-      path.reverse()
       anyFound[0] = True
     else:
       if not y in revg:
         return False
-      path.append(None)
+      revPath.append(None)
       for z in revg[y]:
-        path[-1] = (z, y)
+        revPath[-1] = (z, y)
         if findRootsInner(z):
           return True
-      path.pop()
+      revPath.pop()
     return False
 
   if not (x in revg or x in roots):
