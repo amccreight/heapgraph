@@ -188,7 +188,7 @@ def print_reverse_simple_path(args, ga, x, path):
 
 def print_roots_only_path(f, x, path):
   if len(path) != 0:
-    f.write(path[-1][0])
+    f.write(path[0][0])
   else:
     f.write(x)
   f.write('\n')
@@ -198,15 +198,13 @@ def printPath(args, knownEdgesFn, ga, num_known, roots, x, path):
     print_roots_only_path(args.output_file, x, path)
   elif args.simple_path:
     if args.print_reverse:
+      path.reverse()
       print_reverse_simple_path(args, ga, x, path)
+      path.reverse()
     else:
-      path.reverse()
       print_simple_path(args, ga, x, path)
-      path.reverse()
   else:
-    path.reverse()
     printPathBasic(args, knownEdgesFn, ga, num_known, roots, x, path)
-    path.reverse()
 
 
 ########################################################
@@ -267,7 +265,9 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
     if y in roots:
       def knownEdgesFn(node):
         return reverseGraphKnownEdges(revg, node)
+      path.reverse()
       printPath(args, knownEdgesFn, ga, num_known, roots, x, path)
+      path.reverse()
       anyFound[0] = True
     else:
       if not y in revg:
