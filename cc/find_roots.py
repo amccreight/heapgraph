@@ -70,12 +70,15 @@ parser.add_argument('--output-to-file', dest='output_to_file', action='store_tru
 
 parser.add_argument('--weak-maps', dest='weak_maps', action='store_true',
                     default=False,
-                    help='Enable experimental weak map support. WARNING: this may not give accurate results.')
+                    help='Enable experimental weak map support in DFS mode. WARNING: this may not give accurate results.')
 
 parser.add_argument('--weak-maps-maps-live', dest='weak_maps_maps_live', action='store_true',
                     default=False,
-                    help='Pretend all weak maps are alive. Implies --weak-maps. WARNING: this may not give accurate results.')
+                    help='Pretend all weak maps are alive in DFS mode. Implies --weak-maps. WARNING: this may not give accurate results.')
 
+parser.add_argument('--hide-weak-maps', '-hwm', dest='hide_weak_maps', action='store_true',
+                    default=False,
+                    help='If selected, don\'t show why any weak maps in the path are alive.')
 
 # print a node description
 def print_node (ga, x):
@@ -310,7 +313,6 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
 
         ga.edgeLabels[k].setdefault(p, []).append(lbl)
         p = k
-        # FIXME Add this hide_weak_maps argument option...
         if not m in printedThings and not args.hide_weak_maps:
           printWorkList.append(m)
           printedThings.add(m)
