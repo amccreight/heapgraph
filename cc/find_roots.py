@@ -104,12 +104,12 @@ def print_edge (args, ga, x, y):
     sys.stdout.write(']-->')
 
 
-def print_known_edges(args, revg, ga, x):
-  if not x in revg:
+def printKnownEdges(args, knownEdges, ga, x):
+  if not knownEdges:
     return
 
   print '    known edges:'
-  for e in revg[x]:
+  for e in knownEdges:
     print '       ',
     print_node(ga, e)
     print ' ',
@@ -118,7 +118,7 @@ def print_known_edges(args, revg, ga, x):
 
 
 # explain why a root is a root
-def explain_root (args, revg, ga, num_known, roots, root):
+def explainRoot(args, knownEdgesFn, ga, num_known, roots, root):
   print '    Root', root,
 
   if roots[root] == 'gcRoot':
@@ -140,14 +140,14 @@ def explain_root (args, revg, ga, num_known, roots, root):
 
   print 'is a ref counted object with', num_unknown, 'unknown edge(s).'
 
-  print_known_edges(args, revg, ga, root)
+  printKnownEdges(args, knownEdgesFn(root), ga, root)
 
   if root in ga.incrRoots:
     print '    It is an incremental root, which means it was touched during an incremental CC.'
 
 
 # print out the path to an object that has been discovered
-def print_path (args, revg, ga, num_known, roots, x, path):
+def printPath(args, knownEdgesFn, ga, num_known, roots, x, path):
   for p in path:
     print_node(ga, p[0])
     sys.stdout.write('\n    ')
@@ -157,9 +157,9 @@ def print_path (args, revg, ga, num_known, roots, x, path):
   print
   print
   if path == []:
-    explain_root(args, revg, ga, num_known, roots, x)
+    explainRoot(args, knownEdgesFn, ga, num_known, roots, x)
   else:
-    explain_root(args, revg, ga, num_known, roots, path[0][0])
+    explainRoot(args, knownEdgesFn, ga, num_known, roots, path[0][0])
   print
 
 
@@ -211,6 +211,12 @@ def reverseGraph (g):
   sys.stderr.write('Done.\n\n')
   return g2
 
+def reverseGraphKnownEdges(revg, target):
+  known = []
+  for x in revg.get(target, []):
+    known.append(x)
+  return known
+
 # Look for roots and print out the paths to the given object.
 # This works by reversing the graph, then flooding to find roots.
 def findRootsDFS (args, g, ga, num_known, roots, x):
@@ -225,6 +231,9 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
     visited.add(y)
 
     if y in roots:
+      def knownEdgesFn(node):
+        return reverseGraphKnownEdges(revg, node)
+
       if args.print_roots_only:
         print_roots_only_path(args.output_file, x, path)
       elif args.simple_path:
@@ -236,7 +245,7 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
           path.reverse()
       else:
         path.reverse()
-        print_path(args, revg, ga, num_known, roots, x, path)
+        printPath(args, knownEdgesFn, ga, num_known, roots, x, path)
         path.reverse()
       anyFound[0] = True
     else:
@@ -258,7 +267,8 @@ def findRootsDFS (args, g, ga, num_known, roots, x):
 
   if not anyFound[0] and not args.print_roots_only:
     print 'No roots found for', x
-    print_known_edges(args, revg, ga, x)
+    knownEdges = reverseGraphKnownEdges(revg, x)
+    printKnownEdges(args, knownEdges, ga, x)
 
 
 ########################################################
