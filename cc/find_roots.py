@@ -301,6 +301,13 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
   printWorkList.append(target)
   printedThings = set([target])
 
+  def knownEdgesFn(node):
+    knownEdges = []
+    for src, dsts in g.iteritems():
+      if node in dsts and src != startObject:
+        knownEdges.append(src)
+    return knownEdges
+
   while printWorkList:
     p = printWorkList.popleft()
     path = []
@@ -327,15 +334,11 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
 
       print
 
-      def knownEdgesFn(node):
-        knownEdges = []
-        for src, dsts in g.iteritems():
-          if node in dsts and src != startObject:
-            knownEdges.append(src)
-        return knownEdges
       printPath(args, knownEdgesFn, ga, num_known, roots, path)
     else:
       print 'Didn\'t find a path.'
+      print
+      printKnownEdges(args, knownEdgesFn(p), ga, p)
   return
 
 
