@@ -300,7 +300,7 @@ def printResults(r):
   print
 
 
-if False:
+if __name__ == "__main__":
   # A few simple tests
 
   if len(sys.argv) < 2:
