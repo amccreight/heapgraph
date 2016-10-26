@@ -1,0 +1,8 @@
+[package]
+name = "heapgraph_rust"
+version = "0.1.0"
+authors = ["Andrew McCreight <continuation@gmail.com>"]
+
+[dependencies]
+regex = "0.1.77"
+fnv = "1.0.5"
