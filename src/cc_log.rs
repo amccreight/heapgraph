@@ -126,9 +126,8 @@ impl CCGraph {
     {
         match curr_node {
             Some((addr, mut node)) => {
-                // XXX duplicate checking?
                 node.edges.shrink_to_fit();
-                self.nodes.insert(addr, node);
+                assert!(self.nodes.insert(addr, node).is_none());
             },
             None => ()
         }
