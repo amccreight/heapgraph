@@ -153,7 +153,8 @@ impl CCGraph {
         let mut cc_log = CCGraph::new();
         let mut curr_node : Option<(Addr, GraphNode)> = None;
 
-        while reader.read_line(&mut line).unwrap_or(0) != 0 {
+        for l in reader.lines() {
+            let line = l.unwrap();
             match edge_re.captures(&line) {
                 Some(caps) => {
                     let ref mut x = curr_node.as_mut().unwrap().1;
@@ -193,8 +194,6 @@ impl CCGraph {
                             },
                     },
             }
-
-            line.truncate(0);
         }
 
         assert!(curr_node.is_none(), "Failed to clear curr_node");
