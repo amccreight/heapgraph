@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::env;
 
+#[macro_use] extern crate lazy_static;
 extern crate regex;
 extern crate fnv;
 

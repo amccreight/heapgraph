@@ -87,6 +87,16 @@ pub struct CCGraph {
     // XXX Should tracking address formatting (eg win vs Linux).
 }
 
+
+enum ParsedLine {
+    Node(Addr, NodeType, Atom),
+    Edge(Addr, Atom),
+    WeakMap(Addr, Addr, Addr, Addr),
+    Comment,
+    Done,
+}
+
+
 impl CCGraph {
     fn new() -> CCGraph {
         CCGraph {
@@ -141,62 +151,54 @@ impl CCGraph {
         }
     }
 
-    fn parse(reader: &mut BufReader<File>) -> CCGraph {
-        let weak_map_re = Regex::new(r"^WeakMapEntry map=(?:0x)?([a-zA-Z0-9]+|\(nil\)) key=(?:0x)?([a-zA-Z0-9]+|\(nil\)) keyDelegate=(?:0x)?([a-zA-Z0-9]+|\(nil\)) value=(?:0x)?([a-zA-Z0-9]+)\r?").unwrap();
-        let edge_re = Regex::new(r"^> (?:0x)?([a-zA-Z0-9]+) ([^\r\n]*)\r?").unwrap();
-        let node_re = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
-        let comment_re = Regex::new(r"^#").unwrap();
-        let separator_re = Regex::new(r"^==========").unwrap();
-
-        let mut line = String::with_capacity(1000);
-
-        let mut cc_log = CCGraph::new();
-        let mut curr_node : Option<(Addr, GraphNode)> = None;
-
-        for l in reader.lines() {
-            let line = l.unwrap();
-            match edge_re.captures(&line) {
-                Some(caps) => {
-                    let ref mut x = curr_node.as_mut().unwrap().1;
-                    let addr = cc_log.atomize_addr(caps.at(1).unwrap());
-                    let label = cc_log.atomize_label(caps.at(2).unwrap());
-                    x.edges.push(EdgeInfo { addr: addr, label: label });
-                },
-                None =>
-                    match node_re.captures(&line) {
-                        Some(caps) => {
-                            let addr = cc_log.atomize_addr(caps.at(1).unwrap());
-                            let ty = NodeType::new(caps.at(2).unwrap());
-                            let label = cc_log.atomize_label(caps.at(3).unwrap());
-                            cc_log.add_node(curr_node);
-                            curr_node = Some ((addr, GraphNode { node_type: ty, label: label, edges: Vec::new(), }));
-                        },
-                        None =>
-                            match weak_map_re.captures(&line) {
-                                Some(caps) => {
-                                    let map = cc_log.atomize_weakmap_addr(caps.at(1).unwrap());
-                                    let key = cc_log.atomize_weakmap_addr(caps.at(2).unwrap());
-                                    let delegate = cc_log.atomize_weakmap_addr(caps.at(3).unwrap());
-                                    let val = cc_log.atomize_weakmap_addr(caps.at(4).unwrap());
-                                    cc_log.weak_map_entries.push(WeakMapEntry { weak_map: map, key: key, key_delegate: delegate, value: val });
-                                },
-                                None =>
-                                    if comment_re.is_match(&line) {
-                                        // Skip any comments.
-                                    } else if separator_re.is_match(&line) {
-                                        cc_log.add_node(curr_node);
-                                        curr_node = None;
-                                        break;
-                                    } else {
-                                        print!("\t\tno match for line {}", line);
-                                        panic!("Unknown line");
-                                    },
-                            },
-                    },
-            }
+    fn parse_line(&mut self, line: &str) -> ParsedLine {
+        lazy_static! {
+            static ref weak_map_re: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([a-zA-Z0-9]+|\(nil\)) key=(?:0x)?([a-zA-Z0-9]+|\(nil\)) keyDelegate=(?:0x)?([a-zA-Z0-9]+|\(nil\)) value=(?:0x)?([a-zA-Z0-9]+)\r?").unwrap();
+            static ref edge_re: Regex = Regex::new(r"^> (?:0x)?([a-zA-Z0-9]+) ([^\r\n]*)\r?").unwrap();
+            static ref node_re: Regex = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
+            static ref comment_re: Regex = Regex::new(r"^#").unwrap();
+            static ref separator_re: Regex = Regex::new(r"^==========").unwrap();
         }
 
-        assert!(curr_node.is_none(), "Failed to clear curr_node");
+        for caps in edge_re.captures(&line).iter() {
+            let addr = self.atomize_addr(caps.at(1).unwrap());
+            let label = self.atomize_label(caps.at(2).unwrap());
+            return ParsedLine::Edge(addr, label);
+        }
+        for caps in node_re.captures(&line).iter() {
+            let addr = self.atomize_addr(caps.at(1).unwrap());
+            let ty = NodeType::new(caps.at(2).unwrap());
+            let label = self.atomize_label(caps.at(3).unwrap());
+            return ParsedLine::Node(addr, ty, label);
+        }
+        for caps in weak_map_re.captures(&line).iter() {
+            let map = self.atomize_weakmap_addr(caps.at(1).unwrap());
+            let key = self.atomize_weakmap_addr(caps.at(2).unwrap());
+            let delegate = self.atomize_weakmap_addr(caps.at(3).unwrap());
+            let val = self.atomize_weakmap_addr(caps.at(4).unwrap());
+            return ParsedLine::WeakMap(map, key, delegate, val);
+        }
+        if comment_re.is_match(&line) {
+            return ParsedLine::Comment;
+        }
+        if separator_re.is_match(&line) {
+            return ParsedLine::Done;
+        }
+        print!("\t\tno match for line {}", line);
+        panic!("Unknown line");
+    }
+
+    fn parse(reader: &mut BufReader<File>) -> CCGraph {
+        let mut cc_log = CCGraph::new();
+
+        let mut results = Vec::new();
+
+        for l in reader.lines() {
+            results.push(cc_log.parse_line(l.as_ref().unwrap()));
+            // XXX This crashes because it keeps going after the separator.
+            // XXX really, this should be a map operation over lines,
+            // and then a fold or whatever.
+        }
 
         return cc_log;
     }

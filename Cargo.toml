@@ -6,3 +6,4 @@ authors = ["Andrew McCreight <continuation@gmail.com>"]
 [dependencies]
 regex = "0.1.77"
 fnv = "1.0.5"
+lazy_static = "0.2.1"
