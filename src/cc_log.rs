@@ -84,8 +84,7 @@ pub struct CCGraph {
     // XXX Need to actually parse incremental root entries.
     pub incr_roots: AddrHashSet,
     atoms: StringIntern,
-    // XXX Should replace this with tracking address formats.
-    string_map: HashMap<Addr, String, BuildHasherDefault<FnvHasher>>,
+    // XXX Should tracking address formatting (eg win vs Linux).
 }
 
 impl CCGraph {
@@ -95,20 +94,17 @@ impl CCGraph {
             weak_map_entries: Vec::new(),
             incr_roots: HashSet::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
             atoms: StringIntern::new(),
-            string_map: HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
         }
     }
 
     pub fn atomize_addr(&mut self, addr_str: &str) -> Addr {
-        let addr = match u64::from_str_radix(&addr_str, 16) {
+        match u64::from_str_radix(&addr_str, 16) {
             Ok(v) => v,
-            Err(e) => {
+            Err(_) => {
                 println!("Invalid address string: {}", addr_str);
-                panic!("Invalid address string");
+                panic!("Invalid address string")
             }
-        };
-        self.string_map.insert(addr, String::from(addr_str));
-        return addr;
+        }
     }
 
     pub fn atomize_label(&mut self, label: &str) -> Atom {
