@@ -67,7 +67,7 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
             "Fake object already exists in the graph");
     let mut start_node = GraphNode::new(NodeType::GC(false), log.graph.atomize_label("START_NODE"));
     let empty_label = log.graph.atomize_label("");
-    for r in log.results.known_edges.keys()
+    for r in log.graph.known_edges.keys()
         .chain(log.graph.incr_roots.iter())
         .chain(log.graph.nodes.iter()
                .filter(|&(_, gn)| match gn.node_type { NodeType::GC(b) => b, _ => false })

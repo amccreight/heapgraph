@@ -82,6 +82,8 @@ pub struct CCGraph {
     pub incr_roots: AddrHashSet,
     atoms: StringIntern,
     // XXX Should tracking address formatting (eg win vs Linux).
+    pub garbage: AddrHashSet,
+    pub known_edges: HashMap<Addr, u64, BuildHasherDefault<FnvHasher>>,
 }
 
 
@@ -95,23 +97,8 @@ enum ParsedLine {
     KnownEdge(Addr, u64),
 }
 
-pub struct CCResults {
-    pub garbage: AddrHashSet,
-    pub known_edges: HashMap<Addr, u64, BuildHasherDefault<FnvHasher>>,
-}
-
-impl CCResults {
-    fn new() -> CCResults {
-        CCResults {
-            garbage: HashSet::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
-            known_edges: HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
-        }
-    }
-}
-
 pub struct CCLog {
     pub graph: CCGraph,
-    pub results: CCResults,
 }
 
 lazy_static! {
@@ -132,6 +119,8 @@ impl CCGraph {
             weak_map_entries: Vec::new(),
             incr_roots: HashSet::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
             atoms: StringIntern::new(),
+            garbage: HashSet::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
+            known_edges: HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
         }
     }
 
@@ -224,7 +213,6 @@ impl CCGraph {
 
     fn parse(reader: &mut BufReader<File>) -> CCLog {
         let mut cc_graph = CCGraph::new();
-        let mut cc_results = CCResults::new();
         let mut curr_node = None;
 
         let mut atoms = StringIntern::new();
@@ -243,13 +231,13 @@ impl CCGraph {
                     cc_graph.add_node(curr_node);
                     curr_node = None;
                 },
-                ParsedLine::Garbage(obj) => assert!(cc_results.garbage.insert(obj)),
-                ParsedLine::KnownEdge(obj, rc) => assert!(cc_results.known_edges.insert(obj, rc).is_none()),
+                ParsedLine::Garbage(obj) => assert!(cc_graph.garbage.insert(obj)),
+                ParsedLine::KnownEdge(obj, rc) => assert!(cc_graph.known_edges.insert(obj, rc).is_none()),
             }
         }
 
         cc_graph.atoms = atoms;
-        CCLog { graph: cc_graph, results: cc_results }
+        CCLog { graph: cc_graph }
     }
 }
 
