@@ -9,6 +9,8 @@ mod string_intern;
 mod cc_log;
 mod find_roots;
 
+use cc_log::CCGraph;
+
 fn main() {
     if env::args().len() < 3 {
         println!("Need at least two arguments (file name, target object)");
@@ -25,7 +27,7 @@ fn main() {
 
     println!("Parsing file.");
     let mut cc_log = cc_log::CCLog::parse(f);
-    let target = cc_log.graph.atomize_addr(&target_string);
+    let target = CCGraph::atomize_addr(&target_string);
 
     println!("Finding roots.");
     find_roots::find_roots(&mut cc_log, target);
