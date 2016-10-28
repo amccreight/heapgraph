@@ -34,18 +34,6 @@ impl StringIntern {
             None => panic!("Didn't find atom")
         }
     }
-
-/*
-    pub fn dump(&self) -> () {
-        for (k, v) in self.to_atom.iter() {
-            println!("{} {}", v, k);
-        }
-        println!("");
-        for (k, v) in self.from_atom.iter() {
-            println!("{} {}", k, v);
-        }
-    }
-*/
 }
 
 
