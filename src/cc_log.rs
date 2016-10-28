@@ -16,12 +16,16 @@ use string_intern::StringIntern;
 pub type Addr = u64;
 
 pub struct WeakMapEntry {
-/*
-    weak_map: Addr,
-    key: Addr,
-    key_delegate: Addr,
-    value: Addr
-*/
+    pub weak_map: Addr,
+    pub key: Addr,
+    pub key_delegate: Addr,
+    pub value: Addr
+}
+
+impl WeakMapEntry {
+    fn new(weak_map: Addr, key: Addr, key_delegate: Addr, value: Addr) -> WeakMapEntry {
+        WeakMapEntry { weak_map: weak_map, key: key, key_delegate: key_delegate, value: value }
+    }
 }
 
 pub enum NodeType {
@@ -222,6 +226,7 @@ impl CCLog {
                 },
                 ParsedLine::Edge(e) => curr_node.as_mut().unwrap().1.edges.push(e),
                 ParsedLine::WeakMap(map, key, delegate, val) => {
+                    cc_graph.weak_map_entries.push(WeakMapEntry::new(map, key, delegate, val))
                 },
                 ParsedLine::Comment => (),
                 ParsedLine::Separator => {

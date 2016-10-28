@@ -48,6 +48,37 @@ fn print_path(log: &CCLog, path: &Vec<Addr>) {
     println!("");
 }
 
+type DistancesHashMap = HashMap<Addr, (i32, Option<u64>), BuildHasherDefault<FnvHasher>>;
+
+fn traverse_weak_map_entry(distances: &DistancesHashMap,
+                           dist: i32,
+                           k: Addr, m: Addr, v: Addr, edge_label: &str) {
+    if !distances.contains_key(&k) && !distances.contains_key(&m) {
+      // Haven't found either the key or map yet.
+      return;
+    }
+
+    if distances.get(&k).unwrap().0 > dist || distances.get(&m).unwrap().0 > dist {
+      // Either the key or the weak map is farther away, so we
+      // must wait for the farther one before processing it.
+      return;
+    }
+
+    if distances.contains_key(&v) {
+      assert!(distances.get(&v).unwrap().0 <= dist + 1);
+      return
+    }
+
+    // XXX This doesn't work because the map's value isn't some
+    // arbitrary list. I should use an enum for the weak map vs not
+    // weak map case.
+    //distances.insert(v, (dist + 1, k, m, lbl));
+
+    // XXX This is silly. Maybe just return a boolean and make the
+    // caller deal with this?
+    //workList.append(v);
+}
+
 pub fn find_roots(log: &mut CCLog, target: Addr) {
     let mut work_list = VecDeque::new();
     // XXX Not setting the initial capacity makes this method about 10 times slower.
@@ -55,8 +86,19 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
                                                           BuildHasherDefault::<FnvHasher>::default());
     let mut limit = -1;
 
-    // XXX Ignore weak maps for now. See find_roots.py for how that
-    // should work.
+    let start_node_label = log.atomize_label("START_NODE");
+    let empty_label = log.atomize_label("");
+    let zero_addr = CCLog::atomize_addr("0");
+
+    // For now, ignore keyDelegates.
+    let mut weak_data = HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default());
+    for wme in log.weak_map_entries.iter() {
+        weak_data.entry(wme.weak_map).or_insert_with(|| Vec::new()).push(wme);
+        weak_data.entry(wme.key).or_insert_with(|| Vec::new()).push(wme);
+        if wme.key_delegate != zero_addr {
+            weak_data.entry(wme.key_delegate).or_insert_with(|| Vec::new()).push(wme);
+        }
+    }
 
     println!("Building graph start.");
 
@@ -65,8 +107,7 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
     let start_addr : Addr = 1;
     assert!(!log.nodes.contains_key(&start_addr),
             "Fake object already exists in the graph");
-    let mut start_node = GraphNode::new(NodeType::GC(false), log.atomize_label("START_NODE"));
-    let empty_label = log.atomize_label("");
+    let mut start_node = GraphNode::new(NodeType::GC(false), start_node_label /*log.atomize_label("START_NODE")*/);
     for r in log.known_edges.keys()
         .chain(log.incr_roots.iter())
         .chain(log.nodes.iter()
@@ -110,6 +151,17 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
                     work_list.push_back(y.clone());
                 }
             }
+        }
+
+        match weak_data.get(&x) {
+            Some(d) => {
+                for wme in d.iter() {
+                    assert!(x == wme.weak_map || x == wme.key || x == wme.key_delegate);
+                    traverse_weak_map_entry(&distances, dist, wme.key, wme.weak_map, wme.value, "value in weak map " /*+ wme.weak_map */);
+                    traverse_weak_map_entry(&distances, dist, wme.key_delegate, wme.weak_map, wme.key, "key delegate in weak map " /*+ wme.weak_map*/);
+                }
+            },
+            None => ()
         }
     }
 
