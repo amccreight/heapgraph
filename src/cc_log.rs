@@ -16,10 +16,12 @@ use string_intern::StringIntern;
 pub type Addr = u64;
 
 pub struct WeakMapEntry {
+/*
     weak_map: Addr,
     key: Addr,
     key_delegate: Addr,
     value: Addr
+*/
 }
 
 pub enum NodeType {
@@ -59,6 +61,7 @@ impl fmt::Display for NodeType {
     }
 }
 
+/*
 impl GraphNode {
     fn dump(&self) {
         print!("type: {} edges: ", self.node_type);
@@ -68,6 +71,7 @@ impl GraphNode {
         println!("");
     }
 }
+*/
 
 pub type AddrHashSet = HashSet<Addr, BuildHasherDefault<FnvHasher>>;
 
@@ -134,6 +138,7 @@ impl CCGraph {
         }
     }
 
+/*
     fn add_node(&mut self, curr_node: Option<(Addr, GraphNode)>)
     {
         match curr_node {
@@ -144,7 +149,7 @@ impl CCGraph {
             None => ()
         }
     }
-
+*/
     fn atomize_weakmap_addr(&mut self, x: &str) -> Addr {
         if x == "(nil)" {
             self.atomize_addr("0")
@@ -222,6 +227,7 @@ impl CCGraph {
         return cc_log;
     }
 
+/*
     fn dump(&self) {
         println!("Nodes:");
         for (a, n) in self.nodes.iter() {
@@ -229,6 +235,7 @@ impl CCGraph {
             n.dump();
         }
     }
+*/
 }
 
 pub struct CCResults {
@@ -244,6 +251,7 @@ impl CCResults {
         }
     }
 
+/*
     fn dump(&self) {
         print!("Garbage: ");
         for g in self.garbage.iter() {
@@ -257,6 +265,7 @@ impl CCResults {
         }
         println!("");
     }
+*/
 }
 
 
@@ -269,12 +278,14 @@ impl CCLog {
     pub fn parse(f: File) -> CCLog {
         let mut reader = BufReader::new(f);
         let mut cc_log = CCGraph::parse(&mut reader);
-        let cc_results = CCResults::parse(&mut reader, &mut cc_log);
-        CCLog { graph: cc_log, results: cc_results }
+        panic!("DONE");
+        //let cc_results = CCResults::parse(&mut reader, &mut cc_log);
+        //CCLog { graph: cc_log, results: cc_results }
     }
-
+/*
     pub fn dump(&self) {
         self.graph.dump();
         self.results.dump();
     }
+*/
 }
