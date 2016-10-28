@@ -75,7 +75,7 @@ impl GraphNode {
 
 pub type AddrHashSet = HashSet<Addr, BuildHasherDefault<FnvHasher>>;
 
-pub struct CCGraph {
+pub struct CCLog {
     pub nodes: HashMap<Addr, GraphNode, BuildHasherDefault<FnvHasher>>,
     pub weak_map_entries: Vec<WeakMapEntry>,
     // XXX Need to actually parse incremental root entries.
@@ -97,10 +97,6 @@ enum ParsedLine {
     KnownEdge(Addr, u64),
 }
 
-pub struct CCLog {
-    pub graph: CCGraph,
-}
-
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
     static ref EDGE_RE: Regex = Regex::new(r"^> (?:0x)?([:xdigit:]+) ([^\r\n]*)\r?").unwrap();
@@ -112,9 +108,9 @@ lazy_static! {
     static ref KNOWN_RE: Regex = Regex::new(r"^known=(\d+)").unwrap();
 }
 
-impl CCGraph {
-    fn new() -> CCGraph {
-        CCGraph {
+impl CCLog {
+    fn new() -> CCLog {
+        CCLog {
             nodes: HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
             weak_map_entries: Vec::new(),
             incr_roots: HashSet::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
@@ -162,26 +158,26 @@ impl CCGraph {
 
     fn atomize_weakmap_addr(x: &str) -> Addr {
         if x == "(nil)" {
-            CCGraph::atomize_addr("0")
+            CCLog::atomize_addr("0")
         } else {
-            CCGraph::atomize_addr(&x)
+            CCLog::atomize_addr(&x)
         }
     }
 
     fn parse_line(atoms: &mut StringIntern, line: &str) -> ParsedLine {
         for caps in EDGE_RE.captures(&line).iter() {
-            let addr = CCGraph::atomize_addr(caps.at(1).unwrap());
+            let addr = CCLog::atomize_addr(caps.at(1).unwrap());
             let label = atoms.add(caps.at(2).unwrap());
             return ParsedLine::Edge(EdgeInfo::new(addr, label));
         }
         for caps in NODE_RE.captures(&line).iter() {
-            let addr = CCGraph::atomize_addr(caps.at(1).unwrap());
+            let addr = CCLog::atomize_addr(caps.at(1).unwrap());
             let ty = NodeType::new(caps.at(2).unwrap());
             let label = atoms.add(caps.at(3).unwrap());
             return ParsedLine::Node(addr, GraphNode::new(ty, label));
         }
         for caps in RESULT_RE.captures(&line).iter() {
-            let obj = CCGraph::atomize_addr(caps.at(1).unwrap());
+            let obj = CCLog::atomize_addr(caps.at(1).unwrap());
             let tag = caps.at(2).unwrap();
             if GARBAGE_RE.is_match(&tag) {
                 return ParsedLine::Garbage(obj)
@@ -196,10 +192,10 @@ impl CCGraph {
             }
         }
         for caps in WEAK_MAP_RE.captures(&line).iter() {
-            let map = CCGraph::atomize_weakmap_addr(caps.at(1).unwrap());
-            let key = CCGraph::atomize_weakmap_addr(caps.at(2).unwrap());
-            let delegate = CCGraph::atomize_weakmap_addr(caps.at(3).unwrap());
-            let val = CCGraph::atomize_weakmap_addr(caps.at(4).unwrap());
+            let map = CCLog::atomize_weakmap_addr(caps.at(1).unwrap());
+            let key = CCLog::atomize_weakmap_addr(caps.at(2).unwrap());
+            let delegate = CCLog::atomize_weakmap_addr(caps.at(3).unwrap());
+            let val = CCLog::atomize_weakmap_addr(caps.at(4).unwrap());
             return ParsedLine::WeakMap(map, key, delegate, val);
         }
         if COMMENT_RE.is_match(&line) {
@@ -211,13 +207,14 @@ impl CCGraph {
         panic!("Unknown line {}", line);
     }
 
-    fn parse(reader: &mut BufReader<File>) -> CCLog {
-        let mut cc_graph = CCGraph::new();
+    pub fn parse(f: File) -> CCLog {
+        let reader = BufReader::new(f);
+        let mut cc_graph = CCLog::new();
         let mut curr_node = None;
 
         let mut atoms = StringIntern::new();
 
-        for pl in reader.lines().map(|l|CCGraph::parse_line(&mut atoms, l.as_ref().unwrap())) {
+        for pl in reader.lines().map(|l|CCLog::parse_line(&mut atoms, l.as_ref().unwrap())) {
             match pl {
                 ParsedLine::Node(addr, n) => {
                     cc_graph.add_node(curr_node);
@@ -237,14 +234,6 @@ impl CCGraph {
         }
 
         cc_graph.atoms = atoms;
-        CCLog { graph: cc_graph }
-    }
-}
-
-
-impl CCLog {
-    pub fn parse(f: File) -> CCLog {
-        let mut reader = BufReader::new(f);
-        CCGraph::parse(&mut reader)
+        cc_graph
     }
 }

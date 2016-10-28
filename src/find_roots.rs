@@ -12,17 +12,17 @@ use cc_log::EdgeInfo;
 
 fn print_node(log: &CCLog, node: &Addr) {
     // XXX Should also support Windows-formatted addresses.
-    let label = log.graph.node_label(node).unwrap();
+    let label = log.node_label(node).unwrap();
     print!("0x{:x} [{}]", node, label);
 }
 
 
 fn print_edge(log: &CCLog, x: &Addr, y: &Addr) {
     print!("--[{}]-->",
-           &log.graph.nodes.get(x).unwrap()
+           &log.nodes.get(x).unwrap()
            .edges.iter()
            .filter(|e| &e.addr == y)
-           .map(|e| log.graph.atom_string(&e.label))
+           .map(|e| log.atom_string(&e.label))
            .collect::<Vec<String>>()
            .join(", "));
 }
@@ -51,7 +51,7 @@ fn print_path(log: &CCLog, path: &Vec<Addr>) {
 pub fn find_roots(log: &mut CCLog, target: Addr) {
     let mut work_list = VecDeque::new();
     // XXX Not setting the initial capacity makes this method about 10 times slower.
-    let mut distances = HashMap::with_capacity_and_hasher(log.graph.nodes.len(),
+    let mut distances = HashMap::with_capacity_and_hasher(log.nodes.len(),
                                                           BuildHasherDefault::<FnvHasher>::default());
     let mut limit = -1;
 
@@ -63,18 +63,18 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
     // Create a fake start object that points to the roots and add it
     // to the graph.
     let start_addr : Addr = 1;
-    assert!(!log.graph.nodes.contains_key(&start_addr),
+    assert!(!log.nodes.contains_key(&start_addr),
             "Fake object already exists in the graph");
-    let mut start_node = GraphNode::new(NodeType::GC(false), log.graph.atomize_label("START_NODE"));
-    let empty_label = log.graph.atomize_label("");
-    for r in log.graph.known_edges.keys()
-        .chain(log.graph.incr_roots.iter())
-        .chain(log.graph.nodes.iter()
+    let mut start_node = GraphNode::new(NodeType::GC(false), log.atomize_label("START_NODE"));
+    let empty_label = log.atomize_label("");
+    for r in log.known_edges.keys()
+        .chain(log.incr_roots.iter())
+        .chain(log.nodes.iter()
                .filter(|&(_, gn)| match gn.node_type { NodeType::GC(b) => b, _ => false })
                .map(|(x, _)| x)) {
         start_node.edges.push(EdgeInfo { addr:r.clone(), label: empty_label.clone() });
     }
-    assert!(log.graph.nodes.insert(start_addr, start_node).is_none());
+    assert!(log.nodes.insert(start_addr, start_node).is_none());
     assert!(distances.insert(start_addr, (-1, None)).is_none());
     work_list.push_back(start_addr);
 
@@ -94,7 +94,7 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
             continue;
         }
 
-        let x_node = match log.graph.nodes.get(&x) {
+        let x_node = match log.nodes.get(&x) {
             Some(n) => n,
             None => panic!("missing node: 0x{:x}", x),
         };
