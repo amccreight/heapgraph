@@ -143,12 +143,12 @@ pub struct CCLog {
 }
 
 lazy_static! {
-    static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([a-zA-Z0-9]+|\(nil\)) key=(?:0x)?([a-zA-Z0-9]+|\(nil\)) keyDelegate=(?:0x)?([a-zA-Z0-9]+|\(nil\)) value=(?:0x)?([a-zA-Z0-9]+)\r?").unwrap();
-    static ref EDGE_RE: Regex = Regex::new(r"^> (?:0x)?([a-zA-Z0-9]+) ([^\r\n]*)\r?").unwrap();
-    static ref NODE_RE: Regex = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
+    static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
+    static ref EDGE_RE: Regex = Regex::new(r"^> (?:0x)?([:xdigit:]+) ([^\r\n]*)\r?").unwrap();
+    static ref NODE_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
     static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
     static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
-    static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[([a-z0-9=]+)\]\w*").unwrap();
+    static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[([a-z0-9=]+)\]\w*").unwrap();
     static ref GARBAGE_RE: Regex = Regex::new(r"garbage").unwrap();
     static ref KNOWN_RE: Regex = Regex::new(r"^known=(\d+)").unwrap();
 }
