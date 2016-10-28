@@ -94,15 +94,14 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
             continue;
         }
 
-        let x_maybe_edges = &log.graph.nodes.get(&x);
-        if x_maybe_edges.is_none() {
-            continue;
-        }
-        let x_edges = &x_maybe_edges.unwrap().edges;
+        let x_node = match log.graph.nodes.get(&x) {
+            Some(n) => n,
+            None => panic!("missing node: 0x{:x}", x),
+        };
 
         let new_dist = dist + 1;
         let new_dist_node = (new_dist, Some(x));
-        for e in x_edges {
+        for e in &x_node.edges {
             let y = &e.addr;
             match &distances.get(y) {
                 &Some(&(y_dist, _)) => assert!(y_dist <= new_dist),
