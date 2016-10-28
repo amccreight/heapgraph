@@ -93,7 +93,9 @@ enum ParsedLine {
     Edge(Addr, Atom),
     WeakMap(Addr, Addr, Addr, Addr),
     Comment,
-    Done,
+    Separator,
+    Garbage(Addr),
+    KnownEdge(Addr, u64),
 }
 
 
@@ -153,36 +155,56 @@ impl CCGraph {
 
     fn parse_line(&mut self, line: &str) -> ParsedLine {
         lazy_static! {
-            static ref weak_map_re: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([a-zA-Z0-9]+|\(nil\)) key=(?:0x)?([a-zA-Z0-9]+|\(nil\)) keyDelegate=(?:0x)?([a-zA-Z0-9]+|\(nil\)) value=(?:0x)?([a-zA-Z0-9]+)\r?").unwrap();
-            static ref edge_re: Regex = Regex::new(r"^> (?:0x)?([a-zA-Z0-9]+) ([^\r\n]*)\r?").unwrap();
-            static ref node_re: Regex = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
-            static ref comment_re: Regex = Regex::new(r"^#").unwrap();
-            static ref separator_re: Regex = Regex::new(r"^==========").unwrap();
+            static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([a-zA-Z0-9]+|\(nil\)) key=(?:0x)?([a-zA-Z0-9]+|\(nil\)) keyDelegate=(?:0x)?([a-zA-Z0-9]+|\(nil\)) value=(?:0x)?([a-zA-Z0-9]+)\r?").unwrap();
+            static ref EDGE_RE: Regex = Regex::new(r"^> (?:0x)?([a-zA-Z0-9]+) ([^\r\n]*)\r?").unwrap();
+            static ref NODE_RE: Regex = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
+            static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
+            static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
+            static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[([a-z0-9=]+)\]\w*").unwrap();
+            static ref GARBAGE_RE: Regex = Regex::new(r"garbage").unwrap();
+            static ref KNOWN_RE: Regex = Regex::new(r"^known=(\d+)").unwrap();
         }
 
-        for caps in edge_re.captures(&line).iter() {
+        for caps in EDGE_RE.captures(&line).iter() {
             let addr = self.atomize_addr(caps.at(1).unwrap());
             let label = self.atomize_label(caps.at(2).unwrap());
             return ParsedLine::Edge(addr, label);
         }
-        for caps in node_re.captures(&line).iter() {
+        for caps in NODE_RE.captures(&line).iter() {
             let addr = self.atomize_addr(caps.at(1).unwrap());
             let ty = NodeType::new(caps.at(2).unwrap());
             let label = self.atomize_label(caps.at(3).unwrap());
             return ParsedLine::Node(addr, ty, label);
         }
-        for caps in weak_map_re.captures(&line).iter() {
+        for caps in RESULT_RE.captures(&line).iter() {
+            let obj = self.atomize_addr(caps.at(1).unwrap());
+            let tag = caps.at(2).unwrap();
+            if GARBAGE_RE.is_match(&tag) {
+                return ParsedLine::Garbage(obj)
+            } else {
+                match KNOWN_RE.captures(tag) {
+                    Some(caps) => {
+                        // XXX Comments say that 0x0 is in the
+                        // results sometimes. Is this still true?
+                        let count = u64::from_str(caps.at(1).unwrap()).unwrap();
+                        return ParsedLine::KnownEdge(obj, count)
+                    },
+                    None => panic!("Error: Unknown result entry type: {}", tag)
+                }
+            }
+        }
+        for caps in WEAK_MAP_RE.captures(&line).iter() {
             let map = self.atomize_weakmap_addr(caps.at(1).unwrap());
             let key = self.atomize_weakmap_addr(caps.at(2).unwrap());
             let delegate = self.atomize_weakmap_addr(caps.at(3).unwrap());
             let val = self.atomize_weakmap_addr(caps.at(4).unwrap());
             return ParsedLine::WeakMap(map, key, delegate, val);
         }
-        if comment_re.is_match(&line) {
+        if COMMENT_RE.is_match(&line) {
             return ParsedLine::Comment;
         }
-        if separator_re.is_match(&line) {
-            return ParsedLine::Done;
+        if SEPARATOR_RE.is_match(&line) {
+            return ParsedLine::Separator;
         }
         print!("\t\tno match for line {}", line);
         panic!("Unknown line");
@@ -195,9 +217,6 @@ impl CCGraph {
 
         for l in reader.lines() {
             results.push(cc_log.parse_line(l.as_ref().unwrap()));
-            // XXX This crashes because it keeps going after the separator.
-            // XXX really, this should be a map operation over lines,
-            // and then a fold or whatever.
         }
 
         return cc_log;
@@ -223,42 +242,6 @@ impl CCResults {
             garbage: HashSet::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
             known_edges: HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
         }
-    }
-
-    fn parse(reader: &mut BufReader<File>, cc_log: &mut CCGraph) -> CCResults {
-        let result_re = Regex::new(r"^(?:0x)?([a-zA-Z0-9]+) \[([a-z0-9=]+)\]\w*").unwrap();
-        let garbage_re = Regex::new(r"garbage").unwrap();
-        let known_re = Regex::new(r"^known=(\d+)").unwrap();
-
-        let mut line = String::with_capacity(1000);
-
-        let mut results = CCResults::new();
-
-        while reader.read_line(&mut line).unwrap_or(0) != 0 {
-            match result_re.captures(&line) {
-                Some(caps) => {
-                    let obj = cc_log.atomize_addr(caps.at(1).unwrap());
-                    let tag = caps.at(2).unwrap();
-                    if garbage_re.is_match(&tag) {
-                        assert!(results.garbage.insert(obj));
-                    } else {
-                        match known_re.captures(tag) {
-                            Some(caps) => {
-                                // XXX Comments say that 0x0 is in the
-                                // results sometimes. Is this still true?
-                                let count = u64::from_str(caps.at(1).unwrap()).unwrap();
-                                assert!(results.known_edges.insert(obj, count).is_none(),
-                                        "Found existing count");
-                            },
-                            None => println!("Error: Unknown result entry type: {}", tag)
-                        }
-                    }
-                },
-                None => print!("Error: Unknown result entry: {}", line)
-            }
-            line.truncate(0);
-        }
-        return results;
     }
 
     fn dump(&self) {
