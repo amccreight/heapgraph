@@ -73,18 +73,6 @@ impl GraphNode {
     }
 }
 
-/*
-impl GraphNode {
-    fn dump(&self) {
-        print!("type: {} edges: ", self.node_type);
-        for e in self.edges.iter() {
-            print!("{}, ", e.addr);
-        }
-        println!("");
-    }
-}
-*/
-
 pub type AddrHashSet = HashSet<Addr, BuildHasherDefault<FnvHasher>>;
 
 pub struct CCGraph {
@@ -119,22 +107,6 @@ impl CCResults {
             known_edges: HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default()),
         }
     }
-
-/*
-    fn dump(&self) {
-        print!("Garbage: ");
-        for g in self.garbage.iter() {
-            print!("{}, ", g);
-        }
-        println!("");
-
-        print!("Known edges: ");
-        for (a, rc) in self.known_edges.iter() {
-            print!("({}, {}), ", a, rc);
-        }
-        println!("");
-    }
-*/
 }
 
 pub struct CCLog {
@@ -279,16 +251,6 @@ impl CCGraph {
         cc_graph.atoms = atoms;
         CCLog { graph: cc_graph, results: cc_results }
     }
-
-/*
-    fn dump(&self) {
-        println!("Nodes:");
-        for (a, n) in self.nodes.iter() {
-            print!("  {} ", a);
-            n.dump();
-        }
-    }
-*/
 }
 
 
