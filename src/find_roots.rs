@@ -115,10 +115,9 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
         }
     }
 
-    println!("Printing results. {} {}", distances.len(), log.graph.nodes.len());
-
     // Print out the paths by unwinding backwards to generate a path,
     // then print the path.
+    println!("Printing results.");
     let mut print_work_list = VecDeque::new();
     print_work_list.push_back(target);
 
@@ -148,4 +147,3 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
     }
 
 }
-

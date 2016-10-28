@@ -284,7 +284,6 @@ impl CCGraph {
         }
 
         cc_graph.atoms = atoms;
-
         CCLog { graph: cc_graph, results: cc_results }
     }
 
@@ -303,7 +302,6 @@ impl CCGraph {
 impl CCLog {
     pub fn parse(f: File) -> CCLog {
         let mut reader = BufReader::new(f);
-        let cc_log = CCGraph::parse(&mut reader);
-        panic!("DONE");
+        CCGraph::parse(&mut reader)
     }
 }
