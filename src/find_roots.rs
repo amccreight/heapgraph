@@ -51,7 +51,6 @@ fn print_path(log: &CCLog, path: &Vec<Addr>) {
 pub fn find_roots(log: &mut CCLog, target: Addr) {
     let mut work_list = VecDeque::new();
     // XXX Not setting the initial capacity makes this method about 10 times slower.
-    //let mut distances = HashMap::with_hasher(BuildHasherDefault::<FnvHasher>::default());
     let mut distances = HashMap::with_capacity_and_hasher(log.graph.nodes.len(),
                                                           BuildHasherDefault::<FnvHasher>::default());
     let mut limit = -1;
