@@ -68,8 +68,8 @@ impl fmt::Display for NodeType {
 }
 
 impl GraphNode {
-    fn new(node_type: NodeType, label: Atom) -> GraphNode {
-        GraphNode { node_type: node_type, label: label, edges: Vec::new(), }
+    pub fn new(node_type: NodeType, label: Atom) -> GraphNode {
+        GraphNode { node_type: node_type, label: label, edges: Vec::new() }
     }
 }
 
