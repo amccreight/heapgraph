@@ -87,13 +87,6 @@ impl GraphNode {
 
 pub type AddrHashSet = HashSet<Addr, BuildHasherDefault<FnvHasher>>;
 
-// The argument to from_str_radix can't start with 0x, but it would be
-// nice if our resulting output did contain it, as appropriate.
-
-// XXX Don't really need to explicitly maintain this mapping. What we
-// really need is something to detect the formatting (Windows or
-// Linux) and then print it out in the right way.
-
 pub struct CCGraph {
     pub nodes: HashMap<Addr, GraphNode, BuildHasherDefault<FnvHasher>>,
     pub weak_map_entries: Vec<WeakMapEntry>,
