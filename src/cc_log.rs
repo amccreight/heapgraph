@@ -2,6 +2,7 @@ use std::fmt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str::FromStr;
+use std::str::from_utf8;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::fs::File;
@@ -99,13 +100,29 @@ enum ParsedLine {
 
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
-    static ref EDGE_RE: Regex = Regex::new(r"^> (?:0x)?([:xdigit:]+) ([^\r\n]*)\r?").unwrap();
     static ref NODE_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
     static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
     static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
     static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[([a-z0-9=]+)\]\w*").unwrap();
     static ref GARBAGE_RE: Regex = Regex::new(r"garbage").unwrap();
     static ref KNOWN_RE: Regex = Regex::new(r"^known=(\d+)").unwrap();
+}
+
+fn char_val(c: u8) -> u64 {
+    match c {
+        48...57 => u64::from(c) - 48,
+        97...102 => u64::from(c) - 97 + 10,
+        _ => panic!("invalid character {}", c as char),
+    }
+}
+
+fn read_addr_val(s: &[u8], i: usize) -> u64 {
+    let mut addr : u64 = char_val(s[i]);
+    for j in 1..9 {
+        addr *= 16;
+        addr += char_val(s[i + j]);
+    }
+    addr
 }
 
 impl CCLog {
@@ -165,9 +182,15 @@ impl CCLog {
     }
 
     fn parse_line(atoms: &mut StringIntern, line: &str) -> ParsedLine {
-        for caps in EDGE_RE.captures(&line).iter() {
-            let addr = CCLog::atomize_addr(caps.at(1).unwrap());
-            let label = atoms.add(caps.at(2).unwrap());
+        let s = line.as_bytes();
+        if s[0] == '>' as u8 {
+            assert!(s[1] == ' ' as u8);
+            assert!(s[2] == '0' as u8);
+            assert!(s[3] == 'x' as u8);
+            let addr = read_addr_val(s, 4);
+            assert!(s[13] == ' ' as u8);
+            let label_str = from_utf8(&s[14..s.len()]).unwrap();
+            let label = atoms.add(label_str);
             return ParsedLine::Edge(EdgeInfo::new(addr, label));
         }
         for caps in NODE_RE.captures(&line).iter() {
