@@ -30,15 +30,6 @@ pub enum NodeType {
     GC(bool),
 }
 
-impl NodeType {
-    fn new(s: &str) -> NodeType {
-        match s.split("rc=").nth(1) {
-            Some(rc_num) => NodeType::RefCounted(rc_num.parse().unwrap()),
-            None => NodeType::GC(s.starts_with("gc.")),
-        }
-    }
-}
-
 pub struct EdgeInfo {
     pub addr: Addr,
     pub label: Atom,
@@ -100,7 +91,6 @@ enum ParsedLine {
 
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
-    static ref NODE_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
     static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
     static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
     static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[([a-z0-9=]+)\]\w*").unwrap();
@@ -193,11 +183,42 @@ impl CCLog {
             let label = atoms.add(label_str);
             return ParsedLine::Edge(EdgeInfo::new(addr, label));
         }
-        for caps in NODE_RE.captures(&line).iter() {
-            let addr = CCLog::atomize_addr(caps.at(1).unwrap());
-            let ty = NodeType::new(caps.at(2).unwrap());
-            let label = atoms.add(caps.at(3).unwrap());
-            return ParsedLine::Node(addr, GraphNode::new(ty, label));
+        if s[0] == '0' as u8 {
+            if s[13] == 'g' as u8 && s[14] == 'c' as u8 {
+                // [gc] or [gc.marked]
+                assert!(s[0] == '0' as u8);
+                assert!(s[1] == 'x' as u8);
+                let addr = read_addr_val(s, 2);
+                if s[15] == ']' as u8 {
+                    assert_eq!(s[16], ' ' as u8);
+                    let label_str = from_utf8(&s[17..s.len()]).unwrap();
+                    let label = atoms.add(label_str);
+                    return ParsedLine::Node(addr, GraphNode::new(NodeType::GC(false), label));
+                } else {
+                    assert_eq!(s[15], '.' as u8);
+                    assert_eq!(s[16], 'm' as u8);
+                    assert_eq!(s[17], 'a' as u8);
+                    assert_eq!(s[18], 'r' as u8);
+                    assert_eq!(s[19], 'k' as u8);
+                    assert_eq!(s[20], 'e' as u8);
+                    assert_eq!(s[21], 'd' as u8);
+                    assert_eq!(s[22], ']' as u8);
+                    assert_eq!(s[23], ' ' as u8);
+                    let label_str = from_utf8(&s[24..s.len()]).unwrap();
+                    let label = atoms.add(label_str);
+                    return ParsedLine::Node(addr, GraphNode::new(NodeType::GC(true), label));
+                }
+            } else if s[13] == 'r' as u8 {
+                // [rc=
+                assert_eq!(s[14], 'c' as u8);
+                assert_eq!(s[15], '=' as u8);
+                // XXX somehow read out the base ten refcount, get how many digits.
+
+                let addr = read_addr_val(s, 2);
+                let rc = 0;
+                let label = atoms.add("");
+                return ParsedLine::Node(addr, GraphNode::new(NodeType::RefCounted(rc), label));
+            }
         }
         for caps in RESULT_RE.captures(&line).iter() {
             let obj = CCLog::atomize_addr(caps.at(1).unwrap());
