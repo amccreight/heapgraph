@@ -2,6 +2,7 @@ use std::fmt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str::FromStr;
+use std::str::from_utf8;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::fs::File;
@@ -27,15 +28,6 @@ pub struct WeakMapEntry {
 pub enum NodeType {
     RefCounted(i32),
     GC(bool),
-}
-
-impl NodeType {
-    fn new(s: &str) -> NodeType {
-        match s.split("rc=").nth(1) {
-            Some(rc_num) => NodeType::RefCounted(rc_num.parse().unwrap()),
-            None => NodeType::GC(s.starts_with("gc.")),
-        }
-    }
 }
 
 pub struct EdgeInfo {
@@ -99,13 +91,100 @@ enum ParsedLine {
 
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
-    static ref EDGE_RE: Regex = Regex::new(r"^> (?:0x)?([:xdigit:]+) ([^\r\n]*)\r?").unwrap();
-    static ref NODE_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[(rc=[0-9]+|gc(?:.marked)?)\] ([^\r\n]*)\r?").unwrap();
     static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
     static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
     static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[([a-z0-9=]+)\]\w*").unwrap();
     static ref GARBAGE_RE: Regex = Regex::new(r"garbage").unwrap();
     static ref KNOWN_RE: Regex = Regex::new(r"^known=(\d+)").unwrap();
+}
+
+fn addr_char_val(c: u8) -> u64 {
+    match c {
+        48...57 => u64::from(c) - 48,
+        97...102 => u64::from(c) - 97 + 10,
+        _ => panic!("invalid character {}", c as char),
+    }
+}
+
+fn read_addr_val(s: &[u8], i: usize) -> u64 {
+    let mut addr : u64 = addr_char_val(s[i]);
+    for j in 1..9 {
+        addr *= 16;
+        addr += addr_char_val(s[i + j]);
+    }
+    addr
+}
+
+fn refcount_char_val(c: u8) -> Option<i32> {
+    match c {
+        48...57 => Some(i32::from(c) - 48),
+        _ => None,
+    }
+}
+
+fn read_refcount_val(s: &[u8], i: usize) -> (i32, usize) {
+    let mut len = 1;
+    let mut rc = refcount_char_val(s[i]).unwrap();
+    loop {
+        match refcount_char_val(s[i + len]) {
+            Some(v) => {
+                rc *= 10;
+                rc += v;
+                len += 1;
+            },
+            None => break
+        }
+    }
+    (rc, len)
+}
+
+fn expect_bytes(expected: &[u8], s: &[u8])
+{
+    for (x, y) in expected.iter().zip(s) {
+        assert_eq!(*x as char, *y as char, "Unexpected character");
+    }
+}
+
+enum ParseChunk<'a> {
+    FixedString(&'a [u8]),
+    Address,
+    RefCount,
+}
+
+static ADDR_LEN : usize = 9 + 2;
+
+fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk], s: &[u8]) -> (Addr, Atom, Option<i32>) {
+    let mut addr = None;
+    let mut rc = None;
+    let mut l = 0;
+    for e in chunks {
+        match e {
+            &ParseChunk::FixedString(expected) => {
+                expect_bytes(expected, &s[l..l+expected.len()]);
+                l += expected.len();
+            },
+            &ParseChunk::Address => {
+                expect_bytes(b"0x", &s[l..l+2]);
+                assert!(addr.is_none(), "Only expected one address in ParseChunk list");
+                addr = Some(read_addr_val(s, l+2));
+                l += ADDR_LEN;
+            },
+            &ParseChunk::RefCount => {
+                let (rc_val, rc_len) = read_refcount_val(s, l);
+                assert!(rc.is_none(), "Only expected one refcount in ParseChunk list");
+                rc = Some(rc_val);
+                l += rc_len;
+            },
+        }
+    }
+
+    (addr.unwrap(), atoms.add(from_utf8(&s[l..s.len()]).unwrap()), rc)
+}
+
+fn process_string(atoms: &mut StringIntern, chunks: &[ParseChunk], s: &[u8]) -> (Addr, Atom) {
+    let (addr, lbl, rc) = process_string_with_refcount(atoms, chunks, s);
+    assert!(rc.is_none());
+    (addr, lbl)
 }
 
 impl CCLog {
@@ -164,17 +243,49 @@ impl CCLog {
         }
     }
 
-    fn parse_line(atoms: &mut StringIntern, line: &str) -> ParsedLine {
-        for caps in EDGE_RE.captures(&line).iter() {
-            let addr = CCLog::atomize_addr(caps.at(1).unwrap());
-            let label = atoms.add(caps.at(2).unwrap());
+    fn parse_line(mut atoms: &mut StringIntern, line: &str) -> ParsedLine {
+        let s = line.as_bytes();
+        if s[0] == '>' as u8 {
+            let ps = [ParseChunk::FixedString(b"> "), ParseChunk::Address, ParseChunk::FixedString(b" ")];
+            let (addr, label) = process_string(&mut atoms, &ps, s);
             return ParsedLine::Edge(EdgeInfo::new(addr, label));
         }
-        for caps in NODE_RE.captures(&line).iter() {
-            let addr = CCLog::atomize_addr(caps.at(1).unwrap());
-            let ty = NodeType::new(caps.at(2).unwrap());
-            let label = atoms.add(caps.at(3).unwrap());
-            return ParsedLine::Node(addr, GraphNode::new(ty, label));
+        if s[0] == '#' as u8 {
+            assert!(COMMENT_RE.is_match(&line));
+            return ParsedLine::Comment;
+        }
+        if s[0] == 'W' as u8 {
+            for caps in WEAK_MAP_RE.captures(&line).iter() {
+                let map = CCLog::atomize_weakmap_addr(caps.at(1).unwrap());
+                let key = CCLog::atomize_weakmap_addr(caps.at(2).unwrap());
+                let delegate = CCLog::atomize_weakmap_addr(caps.at(3).unwrap());
+                let val = CCLog::atomize_weakmap_addr(caps.at(4).unwrap());
+                return ParsedLine::WeakMap(map, key, delegate, val);
+            }
+            panic!("Invalid line starting with W: {}", line);
+        }
+        if s[0] == '=' as u8 {
+            assert!(SEPARATOR_RE.is_match(&line));
+            return ParsedLine::Separator;
+        }
+
+        if s[ADDR_LEN + 2] == 'g' as u8 && s[ADDR_LEN + 3] == 'c' as u8 {
+            // [gc] or [gc.marked]
+            if s[ADDR_LEN + 4] == ']' as u8 {
+                let ps = [ParseChunk::Address, ParseChunk::FixedString(b" [gc] ")];
+                let (addr, label) = process_string(&mut atoms, &ps, s);
+                return ParsedLine::Node(addr, GraphNode::new(NodeType::GC(false), label));
+            } else {
+                let ps = [ParseChunk::Address, ParseChunk::FixedString(b" [gc.marked] ")];
+                let (addr, label) = process_string(&mut atoms, &ps, s);
+                return ParsedLine::Node(addr, GraphNode::new(NodeType::GC(true), label));
+            }
+        } else if s[ADDR_LEN + 2] == 'r' as u8 {
+            // [rc=1234]
+            let ps = [ParseChunk::Address, ParseChunk::FixedString(b" [rc="),
+                      ParseChunk::RefCount, ParseChunk::FixedString(b"] ")];
+            let (addr, label, rc) = process_string_with_refcount(&mut atoms, &ps, s);
+            return ParsedLine::Node(addr, GraphNode::new(NodeType::RefCounted(rc.unwrap()), label));
         }
         for caps in RESULT_RE.captures(&line).iter() {
             let obj = CCLog::atomize_addr(caps.at(1).unwrap());
@@ -191,19 +302,7 @@ impl CCLog {
                 panic!("Error: Unknown result entry type: {}", tag)
             }
         }
-        for caps in WEAK_MAP_RE.captures(&line).iter() {
-            let map = CCLog::atomize_weakmap_addr(caps.at(1).unwrap());
-            let key = CCLog::atomize_weakmap_addr(caps.at(2).unwrap());
-            let delegate = CCLog::atomize_weakmap_addr(caps.at(3).unwrap());
-            let val = CCLog::atomize_weakmap_addr(caps.at(4).unwrap());
-            return ParsedLine::WeakMap(map, key, delegate, val);
-        }
-        if COMMENT_RE.is_match(&line) {
-            return ParsedLine::Comment;
-        }
-        if SEPARATOR_RE.is_match(&line) {
-            return ParsedLine::Separator;
-        }
+
         panic!("Unknown line {}", line);
     }
 
@@ -221,7 +320,7 @@ impl CCLog {
                     curr_node = Some ((addr, n));
                 },
                 ParsedLine::Edge(e) => curr_node.as_mut().unwrap().1.edges.push(e),
-                ParsedLine::WeakMap(map, key, delegate, val) => {
+                ParsedLine::WeakMap(_, _, _, _) => {
                 },
                 ParsedLine::Comment => (),
                 ParsedLine::Separator => {
