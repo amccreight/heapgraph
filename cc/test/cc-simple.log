@@ -1,0 +1,12 @@
+0x000000100 [rc=101] First
+> 0x000000200 First Edge
+> 0x000000200 Second Edge
+0x000000200 [rc=1] Second
+0x000000300 [rc=1] Third
+# Fourth is held alive by the incremental root.
+0x000000400 [rc=1] Fourth
+> 0x000000400 Self edge
+IncrementalRoot 0x000000400
+==========
+0x000000100 [known=0]
+0x000000300 [known=0]
