@@ -1,7 +1,6 @@
 use std::fmt;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::str::FromStr;
 use std::str::from_utf8;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -74,7 +73,7 @@ pub struct CCLog {
     atoms: StringIntern,
     // XXX Should tracking address formatting (eg win vs Linux).
     pub garbage: AddrHashSet,
-    pub known_edges: HashMap<Addr, u64, BuildHasherDefault<FnvHasher>>,
+    pub known_edges: HashMap<Addr, i32, BuildHasherDefault<FnvHasher>>,
 }
 
 
@@ -86,7 +85,7 @@ enum ParsedLine {
     Comment,
     Separator,
     Garbage(Addr),
-    KnownEdge(Addr, u64),
+    KnownEdge(Addr, i32),
 }
 
 lazy_static! {
@@ -94,9 +93,6 @@ lazy_static! {
     static ref INCR_ROOT_RE: Regex = Regex::new(r"IncrementalRoot (?:0x)?([:xdigit:]+)").unwrap();
     static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
     static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
-    static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[([a-z0-9=]+)\]\w*").unwrap();
-    static ref GARBAGE_RE: Regex = Regex::new(r"garbage").unwrap();
-    static ref KNOWN_RE: Regex = Regex::new(r"^known=(\d+)").unwrap();
 }
 
 fn addr_char_val(c: u8) -> u64 {
@@ -157,20 +153,20 @@ enum ParseChunk<'a> {
 static ADDR_LEN : usize = 9 + 2;
 
 fn split_addr(mut s: &[u8]) -> (Addr, usize) {
-    expect_bytes(b"0x", &s[..2]);
+    expect_bytes(b"0x", s);
     s = &s[2..];
     let (new_addr, addr_len) = read_addr_val(&s);
     assert_eq!(addr_len + 2, ADDR_LEN);
     (new_addr, 2 + addr_len)
 }
 
-fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk], mut s: &[u8]) -> (Addr, Atom, Option<i32>) {
+fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk], mut s: &[u8]) -> (Option<Addr>, Atom, Option<i32>) {
     let mut addr = None;
     let mut rc = None;
     for e in chunks {
         match e {
             &ParseChunk::FixedString(expected) => {
-                expect_bytes(expected, &s[..expected.len()]);
+                expect_bytes(expected, s);
                 s = &s[expected.len()..];
             },
             &ParseChunk::Address => {
@@ -188,13 +184,21 @@ fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk],
         }
     }
 
-    (addr.unwrap(), atoms.add(from_utf8(&s).unwrap()), rc)
+    (addr, atoms.add(from_utf8(&s).unwrap()), rc)
 }
 
 fn process_string(atoms: &mut StringIntern, chunks: &[ParseChunk], s: &[u8]) -> (Addr, Atom) {
     let (addr, lbl, rc) = process_string_with_refcount(atoms, chunks, s);
     assert!(rc.is_none());
-    (addr, lbl)
+    (addr.unwrap(), lbl)
+}
+
+fn process_string_fixed(atoms: &mut StringIntern, fixed_string: &[u8], s: &[u8]) -> Atom {
+    let chunks = [ParseChunk::FixedString(fixed_string)];
+    let (addr, lbl, rc) = process_string_with_refcount(atoms, &chunks, s);
+    assert!(addr.is_none());
+    assert!(rc.is_none());
+    lbl
 }
 
 impl CCLog {
@@ -253,6 +257,40 @@ impl CCLog {
         }
     }
 
+    fn parse_addr_line(mut atoms: &mut StringIntern, addr: Addr, s: &[u8]) -> Option<ParsedLine> {
+        if s[2] == 'g' as u8 {
+            if s[3] == 'c' as u8 {
+                // [gc] or [gc.marked]
+                if s[4] == ']' as u8 {
+                    let label = process_string_fixed(&mut atoms, b" [gc] ", s);
+                    return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::GC(false), label)));
+                } else {
+                    let label = process_string_fixed(&mut atoms, b" [gc.marked] ", s);
+                    return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::GC(true), label)));
+                }
+            }
+            expect_bytes(b" [garbage]", s);
+            return Some(ParsedLine::Garbage(addr));
+        }
+        if s[2] == 'r' as u8 {
+            // [rc=1234]
+            let ps = [ParseChunk::FixedString(b" [rc="),
+                      ParseChunk::RefCount, ParseChunk::FixedString(b"] ")];
+            if let (None, label, Some(rc)) = process_string_with_refcount(&mut atoms, &ps, s) {
+                return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::RefCounted(rc), label)));
+            }
+            return None;
+        }
+        let ps = [ParseChunk::FixedString(b" [known="),
+                  ParseChunk::RefCount, ParseChunk::FixedString(b"]")];
+        if let (None, _, Some(count)) = process_string_with_refcount(&mut atoms, &ps, s) {
+            // XXX Comments say that 0x0 is in the
+            // results sometimes. Is this still true?
+            return Some(ParsedLine::KnownEdge(addr, count));
+        }
+        return None;
+    }
+
     fn parse_line(mut atoms: &mut StringIntern, line: &str) -> ParsedLine {
         let s = line.as_bytes();
         if s[0] == '>' as u8 {
@@ -286,41 +324,11 @@ impl CCLog {
             return ParsedLine::Separator;
         }
 
-        // Really, want to pull an address out, and then further process the rest of the line.
-        // Maybe split this into a new method.
-
-        if s[ADDR_LEN + 2] == 'g' as u8 && s[ADDR_LEN + 3] == 'c' as u8 {
-            // [gc] or [gc.marked]
-            if s[ADDR_LEN + 4] == ']' as u8 {
-                let ps = [ParseChunk::Address, ParseChunk::FixedString(b" [gc] ")];
-                let (addr, label) = process_string(&mut atoms, &ps, s);
-                return ParsedLine::Node(addr, GraphNode::new(NodeType::GC(false), label));
-            } else {
-                let ps = [ParseChunk::Address, ParseChunk::FixedString(b" [gc.marked] ")];
-                let (addr, label) = process_string(&mut atoms, &ps, s);
-                return ParsedLine::Node(addr, GraphNode::new(NodeType::GC(true), label));
-            }
-        } else if s[ADDR_LEN + 2] == 'r' as u8 {
-            // [rc=1234]
-            let ps = [ParseChunk::Address, ParseChunk::FixedString(b" [rc="),
-                      ParseChunk::RefCount, ParseChunk::FixedString(b"] ")];
-            let (addr, label, rc) = process_string_with_refcount(&mut atoms, &ps, s);
-            return ParsedLine::Node(addr, GraphNode::new(NodeType::RefCounted(rc.unwrap()), label));
+        // All of the remaining cases start with an address.
+        let (addr, addr_len) = split_addr(&s);
+        if let Some(pl) = CCLog::parse_addr_line(&mut atoms, addr, &s[addr_len..]) {
+            return pl;
         }
-        if let Some(caps) = RESULT_RE.captures(&line) {
-            let obj = CCLog::atomize_addr(caps.at(1).unwrap());
-            let tag = caps.at(2).unwrap();
-            if GARBAGE_RE.is_match(&tag) {
-                return ParsedLine::Garbage(obj)
-            } else if let Some(caps) = KNOWN_RE.captures(tag) {
-                // XXX Comments say that 0x0 is in the
-                // results sometimes. Is this still true?
-                let count = u64::from_str(caps.at(1).unwrap()).unwrap();
-                return ParsedLine::KnownEdge(obj, count)
-            }
-            panic!("Error: Unknown result entry type: {}", tag)
-        }
-
         panic!("Unknown line {}", line);
     }
 
