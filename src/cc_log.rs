@@ -90,7 +90,6 @@ enum ParsedLine {
 
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
-    static ref INCR_ROOT_RE: Regex = Regex::new(r"IncrementalRoot (?:0x)?([:xdigit:]+)").unwrap();
 }
 
 fn addr_char_val(c: u8) -> u64 {
@@ -310,11 +309,9 @@ impl CCLog {
             panic!("Invalid line starting with W: {}", line);
         }
         if s[0] == 'I' as u8 {
-            if let Some(caps) = INCR_ROOT_RE.captures(&line) {
-                let addr = CCLog::atomize_addr(caps.at(1).unwrap());
-                return ParsedLine::IncrRoot(addr);
-            }
-            panic!("Invalid line starting with I: {}", line);
+            let ps = [ParseChunk::FixedString(b"IncrementalRoot "), ParseChunk::Address];
+            let (addr, _) = process_string(&mut atoms, &ps, s);
+            return ParsedLine::IncrRoot(addr);
         }
         if s[0] == '=' as u8 {
             expect_bytes(b"==========", s);
