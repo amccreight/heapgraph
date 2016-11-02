@@ -107,12 +107,12 @@ fn addr_char_val(c: u8) -> u64 {
     }
 }
 
-fn read_addr_val(s: &[u8], i: usize) -> (u64, usize) {
-    let mut addr : u64 = addr_char_val(s[i]);
+fn read_addr_val(s: &[u8]) -> (u64, usize) {
+    let mut addr : u64 = addr_char_val(s[0]);
     let mut chars_read = 1;
     for j in 1..9 {
         addr *= 16;
-        addr += addr_char_val(s[i + j]);
+        addr += addr_char_val(s[j]);
         chars_read += 1;
     }
     (addr, chars_read)
@@ -125,11 +125,11 @@ fn refcount_char_val(c: u8) -> Option<i32> {
     }
 }
 
-fn read_refcount_val(s: &[u8], i: usize) -> (i32, usize) {
+fn read_refcount_val(s: &[u8]) -> (i32, usize) {
     let mut len = 1;
-    let mut rc = refcount_char_val(s[i]).unwrap();
+    let mut rc = refcount_char_val(s[0]).unwrap();
     loop {
-        match refcount_char_val(s[i + len]) {
+        match refcount_char_val(s[len]) {
             Some(v) => {
                 rc *= 10;
                 rc += v;
@@ -156,34 +156,35 @@ enum ParseChunk<'a> {
 
 static ADDR_LEN : usize = 9 + 2;
 
-fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk], s: &[u8]) -> (Addr, Atom, Option<i32>) {
+fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk], mut s: &[u8]) -> (Addr, Atom, Option<i32>) {
     let mut addr = None;
     let mut rc = None;
-    let mut l = 0;
     for e in chunks {
         match e {
             &ParseChunk::FixedString(expected) => {
-                expect_bytes(expected, &s[l..l+expected.len()]);
-                l += expected.len();
+                expect_bytes(expected, &s[..expected.len()]);
+                s = &s[expected.len()..];
             },
             &ParseChunk::Address => {
-                expect_bytes(b"0x", &s[l..l+2]);
                 assert!(addr.is_none(), "Only expected one address in ParseChunk list");
-                let (new_addr, addr_len) = read_addr_val(s, l+2);
-                addr = Some(new_addr);
-                l += addr_len + 2;
+
+                expect_bytes(b"0x", &s[..2]);
+                s = &s[2..];
+                let (new_addr, addr_len) = read_addr_val(&s);
                 assert_eq!(addr_len + 2, ADDR_LEN);
+                addr = Some(new_addr);
+                s = &s[addr_len..];
             },
             &ParseChunk::RefCount => {
-                let (rc_val, rc_len) = read_refcount_val(s, l);
+                let (rc_val, rc_len) = read_refcount_val(&s);
                 assert!(rc.is_none(), "Only expected one refcount in ParseChunk list");
                 rc = Some(rc_val);
-                l += rc_len;
+                s = &s[rc_len..];
             },
         }
     }
 
-    (addr.unwrap(), atoms.add(from_utf8(&s[l..s.len()]).unwrap()), rc)
+    (addr.unwrap(), atoms.add(from_utf8(&s).unwrap()), rc)
 }
 
 fn process_string(atoms: &mut StringIntern, chunks: &[ParseChunk], s: &[u8]) -> (Addr, Atom) {
