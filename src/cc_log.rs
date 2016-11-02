@@ -256,7 +256,7 @@ impl CCLog {
             return ParsedLine::Comment;
         }
         if s[0] == 'W' as u8 {
-            for caps in WEAK_MAP_RE.captures(&line).iter() {
+            if let Some(caps) = WEAK_MAP_RE.captures(&line) {
                 let map = CCLog::atomize_weakmap_addr(caps.at(1).unwrap());
                 let key = CCLog::atomize_weakmap_addr(caps.at(2).unwrap());
                 let delegate = CCLog::atomize_weakmap_addr(caps.at(3).unwrap());
@@ -266,7 +266,7 @@ impl CCLog {
             panic!("Invalid line starting with W: {}", line);
         }
         if s[0] == 'I' as u8 {
-            for caps in INCR_ROOT_RE.captures(&line).iter() {
+            if let Some(caps) = INCR_ROOT_RE.captures(&line) {
                 let addr = CCLog::atomize_addr(caps.at(1).unwrap());
                 return ParsedLine::IncrRoot(addr);
             }
@@ -295,20 +295,18 @@ impl CCLog {
             let (addr, label, rc) = process_string_with_refcount(&mut atoms, &ps, s);
             return ParsedLine::Node(addr, GraphNode::new(NodeType::RefCounted(rc.unwrap()), label));
         }
-        for caps in RESULT_RE.captures(&line).iter() {
+        if let Some(caps) = RESULT_RE.captures(&line) {
             let obj = CCLog::atomize_addr(caps.at(1).unwrap());
             let tag = caps.at(2).unwrap();
             if GARBAGE_RE.is_match(&tag) {
                 return ParsedLine::Garbage(obj)
-            } else {
-                for caps in KNOWN_RE.captures(tag) {
-                    // XXX Comments say that 0x0 is in the
-                    // results sometimes. Is this still true?
-                    let count = u64::from_str(caps.at(1).unwrap()).unwrap();
-                    return ParsedLine::KnownEdge(obj, count)
-                }
-                panic!("Error: Unknown result entry type: {}", tag)
+            } else if let Some(caps) = KNOWN_RE.captures(tag) {
+                // XXX Comments say that 0x0 is in the
+                // results sometimes. Is this still true?
+                let count = u64::from_str(caps.at(1).unwrap()).unwrap();
+                return ParsedLine::KnownEdge(obj, count)
             }
+            panic!("Error: Unknown result entry type: {}", tag)
         }
 
         panic!("Unknown line {}", line);
