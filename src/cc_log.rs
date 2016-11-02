@@ -147,13 +147,10 @@ enum ParseChunk<'a> {
     RefCount,
 }
 
-static ADDR_LEN : usize = 9 + 2;
-
 fn split_addr(mut s: &[u8]) -> (Addr, usize) {
     expect_bytes(b"0x", s);
     s = &s[2..];
     let (new_addr, addr_len) = read_addr_val(&s);
-    assert_eq!(addr_len + 2, ADDR_LEN);
     (new_addr, 2 + addr_len)
 }
 
