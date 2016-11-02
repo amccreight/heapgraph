@@ -94,18 +94,21 @@ lazy_static! {
 
 fn addr_char_val(c: u8) -> u64 {
     match c {
-        48...57 => u64::from(c) - 48,
-        97...102 => u64::from(c) - 97 + 10,
+        48...57 => u64::from(c) - 48, // digits
+        97...102 => u64::from(c) - 97 + 10, // lower case a-f
         _ => panic!("invalid character {}", c as char),
     }
 }
 
 fn read_addr_val(s: &[u8]) -> (u64, usize) {
-    let mut addr : u64 = addr_char_val(s[0]);
-    let mut chars_read = 1;
-    for j in 1..9 {
+    let mut addr = 0;
+    let mut chars_read = 0;
+    for c in s {
+        if *c == ' ' as u8 {
+            break;
+        }
         addr *= 16;
-        addr += addr_char_val(s[j]);
+        addr += addr_char_val(*c);
         chars_read += 1;
     }
     (addr, chars_read)
@@ -113,7 +116,7 @@ fn read_addr_val(s: &[u8]) -> (u64, usize) {
 
 fn refcount_char_val(c: u8) -> Option<i32> {
     match c {
-        48...57 => Some(i32::from(c) - 48),
+        48...57 => Some(i32::from(c) - 48), // digits
         _ => None,
     }
 }
