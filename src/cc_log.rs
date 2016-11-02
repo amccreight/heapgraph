@@ -107,13 +107,15 @@ fn addr_char_val(c: u8) -> u64 {
     }
 }
 
-fn read_addr_val(s: &[u8], i: usize) -> u64 {
+fn read_addr_val(s: &[u8], i: usize) -> (u64, usize) {
     let mut addr : u64 = addr_char_val(s[i]);
+    let mut chars_read = 1;
     for j in 1..9 {
         addr *= 16;
         addr += addr_char_val(s[i + j]);
+        chars_read += 1;
     }
-    addr
+    (addr, chars_read)
 }
 
 fn refcount_char_val(c: u8) -> Option<i32> {
@@ -167,8 +169,10 @@ fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk],
             &ParseChunk::Address => {
                 expect_bytes(b"0x", &s[l..l+2]);
                 assert!(addr.is_none(), "Only expected one address in ParseChunk list");
-                addr = Some(read_addr_val(s, l+2));
-                l += ADDR_LEN;
+                let (new_addr, addr_len) = read_addr_val(s, l+2);
+                addr = Some(new_addr);
+                l += addr_len + 2;
+                assert_eq!(addr_len + 2, ADDR_LEN);
             },
             &ParseChunk::RefCount => {
                 let (rc_val, rc_len) = read_refcount_val(s, l);
@@ -276,6 +280,9 @@ impl CCLog {
             assert!(SEPARATOR_RE.is_match(&line));
             return ParsedLine::Separator;
         }
+
+        // Really, want to pull an address out, and then further process the rest of the line.
+        // Maybe split this into a new method.
 
         if s[ADDR_LEN + 2] == 'g' as u8 && s[ADDR_LEN + 3] == 'c' as u8 {
             // [gc] or [gc.marked]
