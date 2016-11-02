@@ -91,7 +91,6 @@ enum ParsedLine {
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
     static ref INCR_ROOT_RE: Regex = Regex::new(r"IncrementalRoot (?:0x)?([:xdigit:]+)").unwrap();
-    static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
     static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
 }
 
@@ -299,7 +298,6 @@ impl CCLog {
             return ParsedLine::Edge(EdgeInfo::new(addr, label));
         }
         if s[0] == '#' as u8 {
-            assert!(COMMENT_RE.is_match(&line));
             return ParsedLine::Comment;
         }
         if s[0] == 'W' as u8 {
