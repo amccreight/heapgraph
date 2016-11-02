@@ -91,7 +91,6 @@ enum ParsedLine {
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
     static ref INCR_ROOT_RE: Regex = Regex::new(r"IncrementalRoot (?:0x)?([:xdigit:]+)").unwrap();
-    static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
 }
 
 fn addr_char_val(c: u8) -> u64 {
@@ -318,7 +317,7 @@ impl CCLog {
             panic!("Invalid line starting with I: {}", line);
         }
         if s[0] == '=' as u8 {
-            assert!(SEPARATOR_RE.is_match(&line));
+            expect_bytes(b"==========", s);
             return ParsedLine::Separator;
         }
 
