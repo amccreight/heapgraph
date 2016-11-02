@@ -70,7 +70,6 @@ pub type AddrHashSet = HashSet<Addr, BuildHasherDefault<FnvHasher>>;
 pub struct CCLog {
     pub nodes: HashMap<Addr, GraphNode, BuildHasherDefault<FnvHasher>>,
     pub weak_map_entries: Vec<WeakMapEntry>,
-    // XXX Need to actually parse incremental root entries.
     pub incr_roots: AddrHashSet,
     atoms: StringIntern,
     // XXX Should tracking address formatting (eg win vs Linux).
@@ -83,6 +82,7 @@ enum ParsedLine {
     Node(Addr, GraphNode),
     Edge(EdgeInfo),
     WeakMap(Addr, Addr, Addr, Addr),
+    IncrRoot(Addr),
     Comment,
     Separator,
     Garbage(Addr),
@@ -91,6 +91,7 @@ enum ParsedLine {
 
 lazy_static! {
     static ref WEAK_MAP_RE: Regex = Regex::new(r"^WeakMapEntry map=(?:0x)?([:xdigit:]+|\(nil\)) key=(?:0x)?([:xdigit:]+|\(nil\)) keyDelegate=(?:0x)?([:xdigit:]+|\(nil\)) value=(?:0x)?([:xdigit:]+)\r?").unwrap();
+    static ref INCR_ROOT_RE: Regex = Regex::new(r"IncrementalRoot (?:0x)?([:xdigit:]+)").unwrap();
     static ref COMMENT_RE: Regex = Regex::new(r"^#").unwrap();
     static ref SEPARATOR_RE: Regex = Regex::new(r"^==========").unwrap();
     static ref RESULT_RE: Regex = Regex::new(r"^(?:0x)?([:xdigit:]+) \[([a-z0-9=]+)\]\w*").unwrap();
@@ -264,6 +265,13 @@ impl CCLog {
             }
             panic!("Invalid line starting with W: {}", line);
         }
+        if s[0] == 'I' as u8 {
+            for caps in INCR_ROOT_RE.captures(&line).iter() {
+                let addr = CCLog::atomize_addr(caps.at(1).unwrap());
+                return ParsedLine::IncrRoot(addr);
+            }
+            panic!("Invalid line starting with I: {}", line);
+        }
         if s[0] == '=' as u8 {
             assert!(SEPARATOR_RE.is_match(&line));
             return ParsedLine::Separator;
@@ -322,6 +330,9 @@ impl CCLog {
                 ParsedLine::Edge(e) => curr_node.as_mut().unwrap().1.edges.push(e),
                 ParsedLine::WeakMap(_, _, _, _) => {
                 },
+                ParsedLine::IncrRoot(addr) => {
+                    cc_graph.incr_roots.insert(addr);
+                }
                 ParsedLine::Comment => (),
                 ParsedLine::Separator => {
                     cc_graph.add_node(curr_node);
