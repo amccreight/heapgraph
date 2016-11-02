@@ -156,6 +156,14 @@ enum ParseChunk<'a> {
 
 static ADDR_LEN : usize = 9 + 2;
 
+fn split_addr(mut s: &[u8]) -> (Addr, usize) {
+    expect_bytes(b"0x", &s[..2]);
+    s = &s[2..];
+    let (new_addr, addr_len) = read_addr_val(&s);
+    assert_eq!(addr_len + 2, ADDR_LEN);
+    (new_addr, 2 + addr_len)
+}
+
 fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk], mut s: &[u8]) -> (Addr, Atom, Option<i32>) {
     let mut addr = None;
     let mut rc = None;
@@ -167,11 +175,7 @@ fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk],
             },
             &ParseChunk::Address => {
                 assert!(addr.is_none(), "Only expected one address in ParseChunk list");
-
-                expect_bytes(b"0x", &s[..2]);
-                s = &s[2..];
-                let (new_addr, addr_len) = read_addr_val(&s);
-                assert_eq!(addr_len + 2, ADDR_LEN);
+                let (new_addr, addr_len) = split_addr(&s);
                 addr = Some(new_addr);
                 s = &s[addr_len..];
             },
