@@ -32,6 +32,40 @@ fn print_edge(log: &CCLog, x: &Addr, y: &Addr) {
 }
 
 
+fn explain_root(log: &CCLog, root: Addr) {
+    print!("    Root {:x} ", root);
+
+    match log.nodes.get(&root).unwrap().node_type {
+        NodeType::GC(true) => {
+            println!("is a marked GC object.");
+            if log.incr_roots.contains(&root) {
+                println!("    It is an incremental root, which means it was touched during an incremental CC.");
+            }
+        },
+        NodeType::GC(false) => panic!("Node {:x} was a root, but was not marked.", root),
+        NodeType::RefCounted(rc) => {
+            let num_unknown =
+                if let Some(known_rc) = log.known_edges.get(&root) {
+                    rc - known_rc
+                } else {
+                    assert!(log.incr_roots.contains(&root));
+                    0
+                };
+
+            println!("is a ref counted object with {} unknown edge{}.",
+                     num_unknown, if num_unknown == 1 { "" } else { "s" });
+
+            // XXX Fix this
+            //printKnownEdges(args, knownEdgesFn(root), ga, root)
+
+            if log.incr_roots.contains(&root) {
+                println!("    It is an incremental root, which means it was touched during an incremental CC.");
+            }
+        }
+    }
+}
+
+
 fn print_path(log: &CCLog, path: &Vec<Addr>) {
     print_node(log, path.first().unwrap());
     println!("");
@@ -48,7 +82,7 @@ fn print_path(log: &CCLog, path: &Vec<Addr>) {
 
     println!("");
 
-    //explainRoot(args, knownEdgesFn, ga, num_known, roots, path[0])
+    explain_root(log, path[0]);
     println!("");
 }
 
