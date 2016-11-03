@@ -8,7 +8,10 @@
 > 000000400 Self edge
 500 [rc=1] Short Address
 00000000000000060 [rc=1] Long Address
+000000600 [gc.marked] Some JS Object
+000000700 [gc.marked] Some incremental root JS Object
 IncrementalRoot 000000400
+IncrementalRoot 000000700
 ==========
-000000100 [known=0]
+000000100 [known=2]
 000000300 [known=0]
