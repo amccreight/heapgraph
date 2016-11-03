@@ -290,40 +290,43 @@ impl CCLog {
 
     fn parse_line(mut atoms: &mut StringIntern, line: &str) -> ParsedLine {
         let s = line.as_bytes();
-        if s[0] == '>' as u8 {
-            let ps = [ParseChunk::FixedString(b"> "), ParseChunk::Address, ParseChunk::FixedString(b" ")];
-            let (addr, label) = process_string(&mut atoms, &ps, s);
-            return ParsedLine::Edge(EdgeInfo::new(addr, label));
-        }
-        if s[0] == '#' as u8 {
-            return ParsedLine::Comment;
-        }
-        if s[0] == 'W' as u8 {
-            if let Some(caps) = WEAK_MAP_RE.captures(&line) {
-                let map = CCLog::atomize_weakmap_addr(caps.at(1).unwrap());
-                let key = CCLog::atomize_weakmap_addr(caps.at(2).unwrap());
-                let delegate = CCLog::atomize_weakmap_addr(caps.at(3).unwrap());
-                let val = CCLog::atomize_weakmap_addr(caps.at(4).unwrap());
-                return ParsedLine::WeakMap(map, key, delegate, val);
+        match s[0] as char {
+            '>' => {
+                let ps = [ParseChunk::FixedString(b"> "), ParseChunk::Address, ParseChunk::FixedString(b" ")];
+                let (addr, label) = process_string(&mut atoms, &ps, s);
+                ParsedLine::Edge(EdgeInfo::new(addr, label))
+            },
+            '#' => ParsedLine::Comment,
+            'W' => {
+                if let Some(caps) = WEAK_MAP_RE.captures(&line) {
+                    let map = CCLog::atomize_weakmap_addr(caps.at(1).unwrap());
+                    let key = CCLog::atomize_weakmap_addr(caps.at(2).unwrap());
+                    let delegate = CCLog::atomize_weakmap_addr(caps.at(3).unwrap());
+                    let val = CCLog::atomize_weakmap_addr(caps.at(4).unwrap());
+                    ParsedLine::WeakMap(map, key, delegate, val)
+                } else {
+                    panic!("Invalid line starting with W: {}", line)
+                }
+            },
+            'I' => {
+                let ps = [ParseChunk::FixedString(b"IncrementalRoot "), ParseChunk::Address];
+                let (addr, _) = process_string(&mut atoms, &ps, s);
+                ParsedLine::IncrRoot(addr)
+            },
+            '=' => {
+                expect_bytes(b"==========", s);
+                ParsedLine::Separator
             }
-            panic!("Invalid line starting with W: {}", line);
+            _ => {
+                // All of the remaining cases start with an address.
+                let (addr, addr_len) = split_addr(&s);
+                if let Some(pl) = CCLog::parse_addr_line(&mut atoms, addr, &s[addr_len..]) {
+                    pl
+                } else {
+                    panic!("Unknown line {}", line)
+                }
+            }
         }
-        if s[0] == 'I' as u8 {
-            let ps = [ParseChunk::FixedString(b"IncrementalRoot "), ParseChunk::Address];
-            let (addr, _) = process_string(&mut atoms, &ps, s);
-            return ParsedLine::IncrRoot(addr);
-        }
-        if s[0] == '=' as u8 {
-            expect_bytes(b"==========", s);
-            return ParsedLine::Separator;
-        }
-
-        // All of the remaining cases start with an address.
-        let (addr, addr_len) = split_addr(&s);
-        if let Some(pl) = CCLog::parse_addr_line(&mut atoms, addr, &s[addr_len..]) {
-            return pl;
-        }
-        panic!("Unknown line {}", line);
     }
 
     pub fn parse(f: File) -> CCLog {
