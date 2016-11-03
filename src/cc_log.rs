@@ -124,15 +124,10 @@ fn refcount_char_val(c: u8) -> Option<i32> {
 fn read_refcount_val(s: &[u8]) -> (i32, usize) {
     let mut len = 1;
     let mut rc = refcount_char_val(s[0]).unwrap();
-    loop {
-        match refcount_char_val(s[len]) {
-            Some(v) => {
-                rc *= 10;
-                rc += v;
-                len += 1;
-            },
-            None => break
-        }
+    while let Some(v) = refcount_char_val(s[len]) {
+        rc *= 10;
+        rc += v;
+        len += 1;
     }
     (rc, len)
 }
@@ -229,29 +224,19 @@ impl CCLog {
     }
 
     pub fn node_label(&self, node: &Addr) -> Option<String> {
-        match self.nodes.get(node) {
-            Some(g) => Some(self.atom_string(&g.label)),
-            None => None
-        }
+        self.nodes.get(node).map(|g| self.atom_string(&g.label))
     }
 
     fn add_node(&mut self, curr_node: Option<(Addr, GraphNode)>)
     {
-        match curr_node {
-            Some((addr, mut node)) => {
-                node.edges.shrink_to_fit();
-                assert!(self.nodes.insert(addr, node).is_none());
-            },
-            None => ()
+        if let Some((addr, mut node)) = curr_node {
+            node.edges.shrink_to_fit();
+            assert!(self.nodes.insert(addr, node).is_none());
         }
     }
 
     fn atomize_weakmap_addr(x: &str) -> Addr {
-        if x == "(nil)" {
-            CCLog::atomize_addr("0")
-        } else {
-            CCLog::atomize_addr(&x)
-        }
+        CCLog::atomize_addr(if x == "(nil)" { "0" } else { &x })
     }
 
     fn parse_addr_line(mut atoms: &mut StringIntern, addr: Addr, s: &[u8]) -> Option<ParsedLine> {
