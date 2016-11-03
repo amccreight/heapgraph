@@ -17,7 +17,7 @@ use cc_log::EdgeInfo;
 fn print_node(log: &CCLog, node: &Addr) {
     // XXX Should also support Windows-formatted addresses.
     let label = log.node_label(node).unwrap();
-    print!("0x{:x} [{}]", node, label);
+    print!("{:x} [{}]", node, label);
 }
 
 
@@ -100,7 +100,7 @@ pub fn find_roots(log: &mut CCLog, target: Addr) {
 
         let x_node = match log.nodes.get(&x) {
             Some(n) => n,
-            None => panic!("missing node: 0x{:x}", x),
+            None => panic!("missing node: {:x}", x),
         };
 
         let new_dist = dist + 1;

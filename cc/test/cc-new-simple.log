@@ -1,0 +1,14 @@
+000000100 [rc=101] First
+> 000000200 First Edge
+> 000000200 Second Edge
+000000200 [rc=1] Second
+000000300 [rc=1] Third
+# Fourth is held alive by the incremental root.
+000000400 [rc=1] Fourth
+> 000000400 Self edge
+500 [rc=1] Short Address
+00000000000000060 [rc=1] Long Address
+IncrementalRoot 000000400
+==========
+000000100 [known=0]
+000000300 [known=0]
