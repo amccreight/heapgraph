@@ -255,37 +255,43 @@ impl CCLog {
     }
 
     fn parse_addr_line(mut atoms: &mut StringIntern, addr: Addr, s: &[u8]) -> Option<ParsedLine> {
-        if s[2] == 'g' as u8 {
-            if s[3] == 'c' as u8 {
-                // [gc] or [gc.marked]
-                if s[4] == ']' as u8 {
-                    let label = process_string_fixed(&mut atoms, b" [gc] ", s);
-                    return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::GC(false), label)));
+        match s[2] as char {
+            'g' => {
+                if s[3] == 'c' as u8 {
+                    // [gc] or [gc.marked]
+                    if s[4] == ']' as u8 {
+                        let label = process_string_fixed(&mut atoms, b" [gc] ", s);
+                        return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::GC(false), label)));
+                    } else {
+                        let label = process_string_fixed(&mut atoms, b" [gc.marked] ", s);
+                        return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::GC(true), label)));
+                    }
+                }
+                expect_bytes(b" [garbage]", s);
+                Some(ParsedLine::Garbage(addr))
+            },
+            'r' => {
+                // [rc=1234]
+                let ps = [ParseChunk::FixedString(b" [rc="),
+                          ParseChunk::RefCount, ParseChunk::FixedString(b"] ")];
+                if let (None, label, Some(rc)) = process_string_with_refcount(&mut atoms, &ps, s) {
+                    Some(ParsedLine::Node(addr, GraphNode::new(NodeType::RefCounted(rc), label)))
                 } else {
-                    let label = process_string_fixed(&mut atoms, b" [gc.marked] ", s);
-                    return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::GC(true), label)));
+                    None
+                }
+            },
+            _ => {
+                let ps = [ParseChunk::FixedString(b" [known="),
+                          ParseChunk::RefCount, ParseChunk::FixedString(b"]")];
+                if let (None, _, Some(count)) = process_string_with_refcount(&mut atoms, &ps, s) {
+                    // XXX Comments say that 0x0 is in the
+                    // results sometimes. Is this still true?
+                    Some(ParsedLine::KnownEdge(addr, count))
+                } else {
+                    None
                 }
             }
-            expect_bytes(b" [garbage]", s);
-            return Some(ParsedLine::Garbage(addr));
         }
-        if s[2] == 'r' as u8 {
-            // [rc=1234]
-            let ps = [ParseChunk::FixedString(b" [rc="),
-                      ParseChunk::RefCount, ParseChunk::FixedString(b"] ")];
-            if let (None, label, Some(rc)) = process_string_with_refcount(&mut atoms, &ps, s) {
-                return Some(ParsedLine::Node(addr, GraphNode::new(NodeType::RefCounted(rc), label)));
-            }
-            return None;
-        }
-        let ps = [ParseChunk::FixedString(b" [known="),
-                  ParseChunk::RefCount, ParseChunk::FixedString(b"]")];
-        if let (None, _, Some(count)) = process_string_with_refcount(&mut atoms, &ps, s) {
-            // XXX Comments say that 0x0 is in the
-            // results sometimes. Is this still true?
-            return Some(ParsedLine::KnownEdge(addr, count));
-        }
-        return None;
     }
 
     fn parse_line(mut atoms: &mut StringIntern, line: &str) -> ParsedLine {
