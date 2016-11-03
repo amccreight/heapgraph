@@ -149,11 +149,10 @@ enum ParseChunk<'a> {
     RefCount,
 }
 
-fn split_addr(mut s: &[u8]) -> (Addr, usize) {
-    expect_bytes(b"0x", s);
-    s = &s[2..];
+// XXX This function is redundant without 0x.
+fn split_addr(s: &[u8]) -> (Addr, usize) {
     let (new_addr, addr_len) = read_addr_val(&s);
-    (new_addr, 2 + addr_len)
+    (new_addr, addr_len)
 }
 
 fn process_string_with_refcount(atoms: &mut StringIntern, chunks: &[ParseChunk], mut s: &[u8]) -> (Option<Addr>, Atom, Option<i32>) {
