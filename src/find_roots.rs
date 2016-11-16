@@ -32,6 +32,20 @@ fn print_edge(log: &CCLog, x: &Addr, y: &Addr) {
 }
 
 
+fn print_known_edges(log: &CCLog, root: Addr) {
+  if not knownEdges:
+    return
+
+  print '    known edges:'
+  for e in knownEdges:
+    print '       ',
+    print_node(ga, e)
+    print ' ',
+    print_edge(args, ga, e, x)
+    sys.stdout.write (' {0}\n'.format(x))
+}
+
+
 fn explain_root(log: &CCLog, root: Addr) {
     print!("    Root {:x} ", root);
 
