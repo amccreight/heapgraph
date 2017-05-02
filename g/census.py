@@ -18,6 +18,7 @@ edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
 # A bit of a hack.  I imagine this could fail in bizarre circumstances.
+# XXX This is out of date.
 def switchToGreyRoots(l):
   return l == "XPC global object" or l.startswith("XPCWrappedNative") or \
       l.startswith("XPCVariant") or l.startswith("nsXPCWrappedJS")
@@ -58,10 +59,11 @@ def parseRoots (f):
   for r, count in rootLabels.iteritems():
     print r, count
 
+  exit(0)
+
   return rootLabels
 
 
-# parse CC graph
 def parseGraph (f):
   edges = {}
   edgeLabels = {}
@@ -123,59 +125,6 @@ def parseGCEdgeFile (fname):
   ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels, roots=roots,
                      rootLabels=rootLabels, weakMapEntries=weakMapEntries)
   return (edges, ga)
-
-
-# Some applications may not care about multiple edges.
-# They can instead use a single graph, which is represented as a map
-# from a source node to a set of its destinations.
-def toSinglegraph (gm):
-  g = {}
-  for src, dsts in gm.iteritems():
-    d = set([])
-    for dst, k in dsts.iteritems():
-      d.add(dst)
-    g[src] = d
-  return g
-
-
-def reverseMultigraph (gm):
-  gm2 = {}
-  for src, dsts in gm.iteritems():
-    if not src in gm2:
-      gm2[src] = {}
-    for dst, k in dsts.iteritems():
-      gm2.setdefault(dst, {})[src] = k
-  return gm2
-
-
-def printGraph(g, ga):
-  for x, edges in g.iteritems():
-    if x in ga.roots:
-      sys.stdout.write('R {0}: '.format(x))
-    else:
-      sys.stdout.write('  {0}: '.format(x))
-    for e, k in edges.iteritems():
-      for n in range(k):
-        sys.stdout.write('{0}, '.format(e))
-    print
-
-def printAttribs(ga):
-  print 'Roots: ',
-  for x in ga.roots:
-    sys.stdout.write('{0}, '.format(x))
-  print
-  return;
-
-  print 'Node labels: ',
-  for x, l in ga.nodeLabels.iteritems():
-    sys.stdout.write('{0}:{1}, '.format(x, l))
-  print
-
-  print 'Edge labels: ',
-  for src, edges in ga.edgeLabels.iteritems():
-    for dst, l in edges.iteritems():
-      sys.stdout.write('{0}->{1}:{2}, '.format(src, dst, l))
-  print
 
 
 if len(sys.argv) < 2:

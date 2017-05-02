@@ -26,7 +26,7 @@ edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
 # A bit of a hack.  I imagine this could fail in bizarre circumstances.
-
+# XXX This is out of date.
 def switchToGreyRoots(l):
   return l == "XPC global object" or l.startswith("XPCWrappedNative") or \
       l.startswith("XPCVariant") or l.startswith("nsXPCWrappedJS")
