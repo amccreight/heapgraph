@@ -70,7 +70,7 @@ def parseGraph (f):
   string = {}
   symbol = 0
   jitcode = 0
-  function = 0
+  function = {}
   Object = 0
   shape = 0
   baseShape = 0
@@ -81,6 +81,8 @@ def parseGraph (f):
   array = 0
   call = 0
   other = 0
+  regexp = 0
+  scope = 0
 
   for l in f:
     e = edgePatt.match(l)
@@ -109,6 +111,10 @@ def parseGraph (f):
           lazyScript += 1
         elif lbl == "object_group":
           objectGroup += 1
+        elif lbl == "reg_exp_shared":
+          regexp += 1
+        elif lbl == "scope":
+          scope += 1
         elif lbl == "INVALID":
           invalid += 1
         elif lbl == "Array <no private>":
@@ -116,7 +122,9 @@ def parseGraph (f):
         elif lbl == "Call <no private>":
           call += 1
         elif lbl.startswith("Function"):
-          function += 1
+          if len(lbl) >= 9: # "Function "
+            lbl = lbl[9:]
+          function[lbl] = function.setdefault(lbl, 0) + 1
         elif lbl.startswith("Object"):
           Object += 1
         elif lbl.startswith("script"):
@@ -129,21 +137,38 @@ def parseGraph (f):
       else:
         print 'Error: Unknown line:', l[:-1]
 
+
+  # Turn a map from strings to count into a count + string pair.
+  def displayifyMap(baseName, m, maxItems):
+    s = baseName + ": "
+    count = 0
+    numItems = 0
+    ellipsed = False
+
+    for stringType, c in sorted(m.items(), reverse=True, key=lambda (a,b): b):
+      if numItems < maxItems:
+        s += "{} {}, ".format(c, stringType)
+      elif not ellipsed:
+        s += "..."
+        ellipsed = True
+      count += c
+      numItems += 1
+
+    return (count, s)
+
+
   displayStuff = []
 
-  s = "strings: "
-  c = 0
-  for stringType, count in sorted(string.items(), reverse=True, key=lambda (a,b): b):
-    s += "{} {}, ".format(count, stringType)
-    c += count
-  displayStuff.append((c, s))
+  displayStuff.append(displayifyMap("strings", string, 5))
+  displayStuff.append(displayifyMap("functions", function, 10))
 
   displayStuff.append((symbol, "symbols: {}".format(symbol)))
   displayStuff.append((jitcode, "jitcodes: {}".format(jitcode)))
-  displayStuff.append((function, "functions: {}".format(function)))
   displayStuff.append((Object, "objects: {}".format(Object)))
   displayStuff.append((shape, "shapes: {}".format(shape)))
   displayStuff.append((baseShape, "base shapes: {}".format(baseShape)))
+  displayStuff.append((regexp, "regexps: {}".format(regexp)))
+  displayStuff.append((scope, "scopes: {}".format(scope)))
   displayStuff.append((script, "scripts: {}".format(script)))
   displayStuff.append((lazyScript, "lazy script: {}".format(lazyScript)))
   displayStuff.append((objectGroup, "object groups: {}".format(objectGroup)))
