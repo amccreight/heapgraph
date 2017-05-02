@@ -17,16 +17,17 @@ nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
-# A bit of a hack.  I imagine this could fail in bizarre circumstances.
-# XXX This is out of date.
+# A bit of a hack. I'm not sure how up to date this is.
 def switchToGreyRoots(l):
-  return l == "XPC global object" or l.startswith("XPCWrappedNative") or \
+  return l == "DOM expando object" or l.startswith("XPCWrappedNative") or \
       l.startswith("XPCVariant") or l.startswith("nsXPCWrappedJS")
 
 def parseRoots (f):
   roots = set([])
   rootLabels = {}
   blackRoot = True;
+
+  prev = None
 
   for l in f:
     nm = nodePatt.match(l)
@@ -56,10 +57,8 @@ def parseRoots (f):
         print "Error: unknown line ", l
         exit(-1)
 
-  for r, count in rootLabels.iteritems():
-    print r, count
-
-  exit(0)
+  #for r, count in rootLabels.iteritems():
+  #  print count, "\t\t", r
 
   return rootLabels
 
