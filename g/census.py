@@ -64,48 +64,97 @@ def parseRoots (f):
 
 
 def parseGraph (f):
-  edges = {}
-  edgeLabels = {}
-  nodeLabels = {}
-  rcNodes = {}
-  gcNodes = {}
-
-  def addNode (node, nodeLabel):
-    assert(not node in edges)
-    edges[node] = {}
-    assert(not node in edgeLabels)
-    edgeLabels[node] = {}
-    assert(nodeLabel != None)
-    if nodeLabel != '':
-      assert (not node in nodeLabels)
-      nodeLabels[node] = nodeLabel
-
-  def addEdge (source, target, edgeLabel):
-    edges[source][target] = edges[source].get(target, 0) + 1
-    if edgeLabel != '':
-      edgeLabels[source].setdefault(target, []).append(edgeLabel)
-
   currNode = None
+
+  # Could save more detail for most of these.
+  string = {}
+  symbol = 0
+  jitcode = 0
+  function = 0
+  Object = 0
+  shape = 0
+  baseShape = 0
+  script = 0
+  lazyScript = 0
+  objectGroup = 0
+  invalid = 0
+  array = 0
+  call = 0
+  other = 0
 
   for l in f:
     e = edgePatt.match(l)
     if e:
+      # Ignore edges
       assert(currNode != None)
-      addEdge(currNode, e.group(1), e.group(3))
+      continue
     else:
       nm = nodePatt.match(l)
       if nm:
         currNode = nm.group(1)
         nodeColor = nm.group(2)
-        addNode(currNode, nm.group(3))
+        lbl = nm.group(3)
+        if lbl.startswith("string <"):
+          lbl = lbl.split("<")[1].split(":")[0]
+          string[lbl] = string.setdefault(lbl, 0) + 1
+        elif lbl.startswith("symbol "):
+          symbol += 1
+        elif lbl == "jitcode":
+          jitcode += 1
+        elif lbl == "shape":
+          shape += 1
+        elif lbl == "base_shape":
+          baseShape += 1
+        elif lbl == "lazyscript":
+          lazyScript += 1
+        elif lbl == "object_group":
+          objectGroup += 1
+        elif lbl == "INVALID":
+          invalid += 1
+        elif lbl == "Array <no private>":
+          array += 1
+        elif lbl == "Call <no private>":
+          call += 1
+        elif lbl.startswith("Function"):
+          function += 1
+        elif lbl.startswith("Object"):
+          Object += 1
+        elif lbl.startswith("script"):
+          script += 1
+        else:
+          other += 1
       elif l[0] == '#':
         # Skip over comments.
         continue
       else:
         print 'Error: Unknown line:', l[:-1]
 
-  # yar, should pass the root crud in and wedge it in here, or somewhere
-  return [edges, edgeLabels, nodeLabels]
+  displayStuff = []
+
+  s = "strings: "
+  c = 0
+  for stringType, count in sorted(string.items(), reverse=True, key=lambda (a,b): b):
+    s += "{} {}, ".format(count, stringType)
+    c += count
+  displayStuff.append((c, s))
+
+  displayStuff.append((symbol, "symbols: {}".format(symbol)))
+  displayStuff.append((jitcode, "jitcodes: {}".format(jitcode)))
+  displayStuff.append((function, "functions: {}".format(function)))
+  displayStuff.append((Object, "objects: {}".format(Object)))
+  displayStuff.append((shape, "shapes: {}".format(shape)))
+  displayStuff.append((baseShape, "base shapes: {}".format(baseShape)))
+  displayStuff.append((script, "scripts: {}".format(script)))
+  displayStuff.append((lazyScript, "lazy script: {}".format(lazyScript)))
+  displayStuff.append((objectGroup, "object groups: {}".format(objectGroup)))
+  displayStuff.append((invalid, "INVALIDs: {}".format(invalid)))
+  displayStuff.append((array, "arrays: {}".format(array)))
+  displayStuff.append((call, "calls: {}".format(call)))
+  displayStuff.append((other, "other: {}".format(other)))
+
+  for _, s in sorted(displayStuff, reverse=True, key=lambda (a,b): a):
+    print s
+
 
 
 def parseGCEdgeFile (fname):
@@ -116,14 +165,9 @@ def parseGCEdgeFile (fname):
     exit(-1)
 
   rootLabels = parseRoots(f)
-  exit(0)
 
-  [edges, edgeLabels, nodeLabels] = parseGraph(f)
+  parseGraph(f)
   f.close()
-
-  ga = GraphAttribs (edgeLabels=edgeLabels, nodeLabels=nodeLabels, roots=roots,
-                     rootLabels=rootLabels, weakMapEntries=weakMapEntries)
-  return (edges, ga)
 
 
 if len(sys.argv) < 2:
