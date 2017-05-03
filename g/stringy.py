@@ -9,7 +9,6 @@ from collections import namedtuple
 #
 
 stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )<length ([0-9]+)(?: \(truncated\))?> ([^\r\n]*)\r?$')
-oldStringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )([^\r\n]*)\r?$')
 
 
 # What about substrings?  They look like this:
@@ -69,12 +68,6 @@ def parseGCLogInner(f):
       # 4 is the string itself
       desc = (int(stringMatch.group(3)), stringMatch.group(4))
       strings[desc] = strings.get(desc, 0) + 1
-    else:
-      stringMatch = oldStringPatt.match(l)
-      if stringMatch:
-        s = stringMatch.group(3)
-        desc = (len(s), s)
-        strings[desc] = strings.get(desc, 0) + 1
 
   return strings
 
