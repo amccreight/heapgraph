@@ -8,7 +8,7 @@ from collections import namedtuple
 # This script analyzes the strings in a GC dump.
 #
 
-stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )<length ([0-9]+)(?: \(truncated\))?> ([^\r\n]*)\r?$')
+stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )<([^:]*): length ([0-9]+)(?: \(truncated\))?> ([^\r\n]*)\r?$')
 
 
 # What about substrings?  They look like this:
@@ -64,9 +64,10 @@ def parseGCLogInner(f):
     if stringMatch:
       # 1 is the address
       # 2 is the color
-      # 3 is the length
-      # 4 is the string itself
-      desc = (int(stringMatch.group(3)), stringMatch.group(4))
+      # 3 is the string type
+      # 4 is the length
+      # 5 is the string itself
+      desc = (int(stringMatch.group(4)), stringMatch.group(5))
       strings[desc] = strings.get(desc, 0) + 1
 
   return strings
