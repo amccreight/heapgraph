@@ -128,6 +128,9 @@ def parseGraph (f):
         elif lbl.startswith("Object"):
           Object += 1
         elif lbl.startswith("script"):
+          # The script lines have a format like:
+          #script chrome://global/content/bindings/autocomplete.xml:148
+          # Should remove the trailing URL where possible, and also remove the line number, to bucket it more.
           script += 1
         else:
           other += 1
