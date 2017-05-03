@@ -74,7 +74,7 @@ def parseGraph (f):
   Object = 0
   shape = 0
   baseShape = 0
-  script = 0
+  script = {}
   lazyScript = 0
   objectGroup = 0
   invalid = 0
@@ -122,16 +122,18 @@ def parseGraph (f):
         elif lbl == "Call <no private>":
           call += 1
         elif lbl.startswith("Function"):
+          # For a Function, could retrieve the script name from the script field.
           if len(lbl) >= 9: # "Function "
             lbl = lbl[9:]
           function[lbl] = function.setdefault(lbl, 0) + 1
         elif lbl.startswith("Object"):
           Object += 1
         elif lbl.startswith("script"):
-          # The script lines have a format like:
-          #script chrome://global/content/bindings/autocomplete.xml:148
-          # Should remove the trailing URL where possible, and also remove the line number, to bucket it more.
-          script += 1
+          if len(lbl) >= 7: # "script "
+            lbl = lbl[7:]
+          # Remove the line number
+          lbl = lbl.rsplit(":", 1)[0]
+          script[lbl] = script.setdefault(lbl, 0) + 1
         else:
           other += 1
       elif l[0] == '#':
@@ -164,6 +166,7 @@ def parseGraph (f):
 
   displayStuff.append(displayifyMap("strings", string, 5))
   displayStuff.append(displayifyMap("functions", function, 10))
+  displayStuff.append(displayifyMap("scripts", script, 10))
 
   displayStuff.append((symbol, "symbols: {}".format(symbol)))
   displayStuff.append((jitcode, "jitcodes: {}".format(jitcode)))
@@ -172,7 +175,6 @@ def parseGraph (f):
   displayStuff.append((baseShape, "base shapes: {}".format(baseShape)))
   displayStuff.append((regexp, "regexps: {}".format(regexp)))
   displayStuff.append((scope, "scopes: {}".format(scope)))
-  displayStuff.append((script, "scripts: {}".format(script)))
   displayStuff.append((lazyScript, "lazy script: {}".format(lazyScript)))
   displayStuff.append((objectGroup, "object groups: {}".format(objectGroup)))
   displayStuff.append((invalid, "INVALIDs: {}".format(invalid)))
