@@ -65,16 +65,18 @@ def parseRoots (f):
 
 def parseGraph (f):
   currNode = None
+  inFunction = False
 
-  # Could save more detail for most of these.
   string = {}
   symbol = 0
   jitcode = 0
   function = {}
+  functionScripts = {}
   Object = 0
   shape = 0
   baseShape = 0
   script = {}
+  scriptURLs = {}
   lazyScript = 0
   objectGroup = 0
   invalid = 0
@@ -85,12 +87,14 @@ def parseGraph (f):
   scope = 0
 
   for l in f:
-    e = edgePatt.match(l)
-    if e:
-      # Ignore edges
+    em = edgePatt.match(l)
+    if em:
       assert(currNode != None)
+      if inFunction and em.group(3) == "script":
+        functionScripts[currNode] = em.group(1)
       continue
     else:
+      inFunction = False
       nm = nodePatt.match(l)
       if nm:
         currNode = nm.group(1)
@@ -122,10 +126,11 @@ def parseGraph (f):
         elif lbl == "Call <no private>":
           call += 1
         elif lbl.startswith("Function"):
+          inFunction = True
           # For a Function, could retrieve the script name from the script field.
           if len(lbl) >= 9: # "Function "
             lbl = lbl[9:]
-          function[lbl] = function.setdefault(lbl, 0) + 1
+          function.setdefault(lbl, []).append(currNode)
         elif lbl.startswith("Object"):
           Object += 1
         elif lbl.startswith("script"):
@@ -134,6 +139,7 @@ def parseGraph (f):
           # Remove the line number
           lbl = lbl.rsplit(":", 1)[0]
           script[lbl] = script.setdefault(lbl, 0) + 1
+          scriptURLs[currNode] = lbl
         else:
           other += 1
       elif l[0] == '#':
@@ -141,6 +147,15 @@ def parseGraph (f):
         continue
       else:
         print 'Error: Unknown line:', l[:-1]
+
+  scriptyFunctions = {}
+  for (f, faddrs) in function.iteritems():
+    for fa in faddrs:
+      scriptName = scriptURLs.get(functionScripts.get(fa, "NONE"), "???")
+      key = f
+      if scriptName != "???":
+        key = key + " " + scriptName
+      scriptyFunctions[key] = scriptyFunctions.setdefault(key, 0) + 1
 
 
   # Turn a map from strings to count into a count + string pair.
@@ -165,7 +180,7 @@ def parseGraph (f):
   displayStuff = []
 
   displayStuff.append(displayifyMap("strings", string, 5))
-  displayStuff.append(displayifyMap("functions", function, 10))
+  displayStuff.append(displayifyMap("functions", scriptyFunctions, 100))
   displayStuff.append(displayifyMap("scripts", script, 10))
 
   displayStuff.append((symbol, "symbols: {}".format(symbol)))
