@@ -26,7 +26,7 @@ stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )<([^:]*): len
 def analyzeStrings(strings):
   metrics = {}
 
-  for (l, s), count in strings.iteritems():
+  for (_, l, s), count in strings.iteritems():
     # i is the metric of interest
     i = count * l
     metrics.setdefault(i, []).append(s)
@@ -55,6 +55,13 @@ def analyzeStrings(strings):
 #      print 'TOO MANY'
 
 
+def dumpAtoms(strings):
+  for (t, l, s), count in strings.iteritems():
+    if t != "atom":
+      continue
+    print s
+
+
 # This parses a file f and produces a dict mapping strings to the number of times
 # the strings occur.
 def parseGCLogInner(f):
@@ -67,7 +74,7 @@ def parseGCLogInner(f):
       # 3 is the string type
       # 4 is the length
       # 5 is the string itself
-      desc = (int(stringMatch.group(4)), stringMatch.group(5))
+      desc = (stringMatch.group(3), int(stringMatch.group(4)), stringMatch.group(5))
       strings[desc] = strings.get(desc, 0) + 1
 
   return strings
@@ -82,7 +89,7 @@ def parseGCLog (fname):
   strings = parseGCLogInner(f)
   f.close()
   analyzeStrings(strings)
-
+  #dumpAtoms(strings)
 
 if len(sys.argv) < 2:
   print 'Not enough arguments.'
