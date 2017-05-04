@@ -84,7 +84,7 @@ def parseGraph (f):
   call = 0
   other = 0
   regexp = 0
-  scope = 0
+  scope = {}
 
   for l in f:
     em = edgePatt.match(l)
@@ -117,8 +117,10 @@ def parseGraph (f):
           objectGroup += 1
         elif lbl == "reg_exp_shared":
           regexp += 1
-        elif lbl == "scope":
-          scope += 1
+        elif lbl.startswith("scope"):
+          if len(lbl) >= 6: # "scope "
+            lbl = lbl[6:]
+          scope[lbl] = scope.setdefault(lbl, 0) + 1
         elif lbl == "INVALID":
           invalid += 1
         elif lbl == "Array <no private>":
@@ -180,8 +182,9 @@ def parseGraph (f):
   displayStuff = []
 
   displayStuff.append(displayifyMap("strings", string, 5))
-  displayStuff.append(displayifyMap("functions", scriptyFunctions, 100))
+  displayStuff.append(displayifyMap("functions", scriptyFunctions, 40))
   displayStuff.append(displayifyMap("scripts", script, 10))
+  displayStuff.append(displayifyMap("scopes", scope, 10))
 
   displayStuff.append((symbol, "symbols: {}".format(symbol)))
   displayStuff.append((jitcode, "jitcodes: {}".format(jitcode)))
@@ -189,7 +192,6 @@ def parseGraph (f):
   displayStuff.append((shape, "shapes: {}".format(shape)))
   displayStuff.append((baseShape, "base shapes: {}".format(baseShape)))
   displayStuff.append((regexp, "regexps: {}".format(regexp)))
-  displayStuff.append((scope, "scopes: {}".format(scope)))
   displayStuff.append((lazyScript, "lazy script: {}".format(lazyScript)))
   displayStuff.append((objectGroup, "object groups: {}".format(objectGroup)))
   displayStuff.append((invalid, "INVALIDs: {}".format(invalid)))
