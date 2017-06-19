@@ -9,9 +9,25 @@ import re
 from collections import namedtuple
 
 
-####
-####  Log parsing
-####
+# Turn a map from strings to count into a count + string pair.
+def displayifyMap(baseName, m, maxItems):
+  s = baseName + ": "
+  count = 0
+  numItems = 0
+  ellipsed = False
+
+  for stringType, c in sorted(m.items(), reverse=True, key=lambda (a,b): b):
+    if numItems < maxItems:
+      s += "{} {}, ".format(c, stringType)
+    elif not ellipsed:
+      s += "..."
+      ellipsed = True
+    count += c
+    numItems += 1
+
+  return (count, s)
+
+
 
 nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
@@ -26,7 +42,14 @@ def parseRoots (f):
 def parseGraph (f):
   currNode = None
   currNames = []
+  scopeFunctions = {}
+
+  functionNames = {}
+  functionScripts = {}
+  scriptURLs = {}
+
   inScope = False
+  inFunction = False
   strings = {}
   scopeNames = {}
 
@@ -36,14 +59,19 @@ def parseGraph (f):
       assert(currNode != None)
       edge = em.group(1)
       lbl = em.group(3)
-      if not inScope:
+      if not inScope and not inFunction:
+        continue
+      if inFunction:
+        if lbl != "script":
+          continue
+        functionScripts[currNode] = edge
         continue
       if lbl == "scope enclosing":
         continue
-      elif lbl == "scope canonical function":
-        # XXX Look up the function name.
+      if lbl == "scope canonical function":
+        scopeFunctions[currNode] = edge
         continue
-      elif lbl == "scope name":
+      if lbl == "scope name":
         name = strings.get(edge)
         if not name:
           print "unknown string"
@@ -62,6 +90,7 @@ def parseGraph (f):
         currNames = ', '.join(currNames)
         scopeNames[currNames] = scopeNames.setdefault(currNames, 0) + 1
       inScope = False
+      inFunction = False
       currNode = nm.group(1)
       currNames = []
       lbl = nm.group(3)
@@ -74,12 +103,45 @@ def parseGraph (f):
         if len(lbl) >= 6: # "scope "
           lbl = lbl[6:]
         # What to do with the current scope kind?
+        continue
+      if lbl.startswith("Function"):
+        inFunction = True
+        # For a Function, could retrieve the script name from the script field.
+        if len(lbl) >= 9: # "Function "
+          lbl = lbl[9:]
+        functionNames[currNode] = lbl
+      elif lbl.startswith("script"):
+        if len(lbl) >= 7: # "script "
+          lbl = lbl[7:]
+        # Remove the line number
+        lbl = lbl.rsplit(":", 1)[0]
+        scriptURLs[currNode] = lbl
     elif l[0] == '#':
       # Skip over comments.
       continue
     else:
       print 'Error: Unknown line:', l[:-1]
 
+  counts = {}
+  for k, v in scopeFunctions.iteritems():
+    script = scriptURLs.get(functionScripts.get(v, "UNKNOWN"), "UNKNOWN")
+    if script == "resource://gre/modules/ReaderMode.jsm":
+      print k
+    #counts[script] = counts.setdefault(script, 0) + 1
+
+  #for k, v in counts.iteritems():
+  #  print k, v
+
+
+  #displayStuff = []
+  #displayStuff.append(displayifyMap("scripts", counts, 20))
+
+  #for _, s in sorted(displayStuff, reverse=True, key=lambda (a,b): a):
+  #  print s
+
+
+
+  exit(0)
   other = 0
   for k, v in sorted(scopeNames.iteritems(), reverse=True, key=lambda (a,b): a):
     if v < 1:
