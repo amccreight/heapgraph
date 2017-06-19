@@ -129,7 +129,6 @@ def parseGraph (f):
           call += 1
         elif lbl.startswith("Function"):
           inFunction = True
-          # For a Function, could retrieve the script name from the script field.
           if len(lbl) >= 9: # "Function "
             lbl = lbl[9:]
           function.setdefault(lbl, []).append(currNode)
