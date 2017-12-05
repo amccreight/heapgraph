@@ -24,6 +24,7 @@ pub struct WeakMapEntry {
 */
 }
 
+#[derive(PartialEq)]
 pub enum NodeType {
     RefCounted(i32),
     GC(bool),

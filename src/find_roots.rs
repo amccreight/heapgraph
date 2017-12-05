@@ -28,10 +28,50 @@ fn print_edge(log: &CCLog, x: &Addr, y: &Addr) {
 }
 
 
+fn explain_root(log: &CCLog, root: &Addr) {
+    let root_node = log.nodes.get(root).unwrap();
+    let root_is_incr = log.incr_roots.contains(root);
+
+    // XXX Should also support Windows-formatted addresses.
+    print!("    Root 0x{:x} ", root);
+
+    if root_node.node_type == NodeType::GC(true) {
+        println!("is a marked GC object.");
+        if root_is_incr {
+            println!("    It is an incremental root, which means it was touched during an incremental CC.");
+        }
+        return
+    }
+
+    let root_rc = match root_node.node_type {
+        NodeType::RefCounted(ref rc) => rc,
+        NodeType::GC(_) => panic!("Didn't expect unmarked GC node to be root"),
+    };
+
+    let num_unknown = match log.known_edges.get(root) {
+        Some(known) => root_rc - known,
+        None => {
+            assert!(root_is_incr);
+            0
+        }
+    };
+
+    println!("is a ref counted object with {} unknown edge(s).", num_unknown);
+
+    // XXX
+    //printKnownEdges(args, knownEdgesFn(root), ga, root);
+
+    if root_is_incr {
+        println!("    It is an incremental root, which means it was touched during an incremental CC.");
+    }
+}
+
+
 fn print_path(log: &CCLog, path: &Vec<Addr>) {
-    print_node(log, path.first().unwrap());
+    let root = path.first().unwrap();
+    print_node(log, root);
     println!("");
-    let mut prev = path.first().unwrap();
+    let mut prev = root;
 
     for p in path.split_first().unwrap().1 {
         print!("    ");
@@ -44,7 +84,7 @@ fn print_path(log: &CCLog, path: &Vec<Addr>) {
 
     println!("");
 
-    //explainRoot(args, knownEdgesFn, ga, num_known, roots, path[0])
+    explain_root(&log, /* args, knownEdgesFn, ga, num_known, roots, */ &root);
     println!("");
 }
 
