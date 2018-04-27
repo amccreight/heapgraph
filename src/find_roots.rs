@@ -28,6 +28,22 @@ fn print_edge(log: &CCLog, x: &Addr, y: &Addr) {
 }
 
 
+fn print_known_edges(log: &CCLog, x: &Addr, known_edges: &Vec<Addr>) {
+    if known_edges.len() == 0 {
+        return;
+    }
+
+    println!("    known edges:");
+    for e in known_edges.iter() {
+        print!("       ");
+        print_node(&log, &e);
+        print!(" ");
+        print_edge(&log, e, x);
+        println!(" 0x{:x}", x);
+    }
+}
+
+
 fn explain_root(log: &CCLog, root: &Addr) {
     let root_node = log.nodes.get(root).unwrap();
     let root_is_incr = log.incr_roots.contains(root);
@@ -58,8 +74,10 @@ fn explain_root(log: &CCLog, root: &Addr) {
 
     println!("is a ref counted object with {} unknown edge(s).", num_unknown);
 
-    // XXX
-    //printKnownEdges(args, knownEdgesFn(root), ga, root);
+    // XXX Where is this list of known edges supposed to come from?
+    // The "known_edges" field of the log is the number of known
+    // edges.
+    // print_known_edges(&log, &root, known_edges: &Vec<Addr>) {
 
     if root_is_incr {
         println!("    It is an incremental root, which means it was touched during an incremental CC.");
