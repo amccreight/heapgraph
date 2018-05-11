@@ -16,6 +16,8 @@ parser = argparse.ArgumentParser(description='Compute the dominator tree of a GC
 parser.add_argument('file_name',
                     help='GC graph file name')
 
+parser.add_argument('target',
+                    help='address of target object')
 
 def printTree(t):
   for x, children in t.iteritems():
@@ -78,9 +80,10 @@ def slowDomTree(g, source):
 
 ####
 
+fake_root_label = "root"
+
 def domTreeRoots(g, roots):
   # Set up a fake node for the roots.
-  fake_root_label = "root"
   assert not fake_root_label in g
   g[fake_root_label] = []
   for r in roots:
@@ -172,13 +175,49 @@ def loadGraph(fname):
   return (g, ga)
 
 
+def getNumChildren(ga, t):
+  childCounts = {}
+
+  def getNumChildrenHelper(x):
+    total = 0
+    for y in t.get(x, []):
+      total += getNumChildrenHelper(y) + 1
+    childCounts[x] = total
+    return total
+
+  getNumChildrenHelper(fake_root_label)
+
+  del childCounts[fake_root_label]
+
+  counts = {}
+  for x, n in childCounts.iteritems():
+    counts.setdefault(n, []).append(x)
+
+  n = 0
+  for x in reversed(sorted(counts.keys())):
+    for c in counts[x]:
+      print x, c, ga.nodeLabels[c]
+
+
+
+
 if __name__ == "__main__":
 
   if True:
     args = parser.parse_args()
     (g, ga) = loadGraph(args.file_name)
-    print domTreeRoots(g, ga.roots)
+    t = domTreeRoots(g, ga.roots)
+
+    getNumChildren(ga, t)
+
+    #for node, children in t.iteritems():
+    #  print node, ' '.join(children)
+
+    #print t.keys()
+    #print t[args.target]
+
   elif True:
+    # Simple test cases.
     g1 = ("c",
           {
             "a": ["b"],
