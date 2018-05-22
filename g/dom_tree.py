@@ -16,8 +16,8 @@ parser = argparse.ArgumentParser(description='Compute the dominator tree of a GC
 parser.add_argument('file_name',
                     help='GC graph file name')
 
-parser.add_argument('target',
-                    help='address of target object')
+#parser.add_argument('target',
+#                    help='address of target object')
 
 def printTree(t):
   for x, children in t.iteritems():
@@ -163,6 +163,92 @@ def domTree(g, source_label):
 
   return tree
 
+#######
+
+# Graphviz output of a tree.
+
+def nodeLabel(ga, x):
+  if x == fake_root_label:
+    return fake_root_label
+  l = ga.nodeLabels.get(x)
+  if l.endswith(' <no private>'):
+    l = l[:-len(' <no private>')]
+  return l
+
+def copyReachableTree(ga, tree, roots):
+  newTree = {}
+
+  def copyReachableTreeHelper(x):
+    assert not x in newTree
+    newTree[x] = tree[x]
+    for c in newTree[x]:
+      if not x in newTree and c in tree:
+        copyReachableTreeHelper(c)
+
+  for r in roots:
+    copyReachableTreeHelper(r)
+  return newTree
+
+
+def displayLabel(ga, g, x, lbl):
+  if lbl == "Object":
+    return x
+
+  if lbl == "NonSyntacticVariablesObject":
+    for y in g[x]:
+      if "__URI__" in ga.edgeLabels.get(x, {}).get(y, []):
+        return "NSVO " + (ga.nodeLabels.get(y).split())[-1].split('/')[-1]
+
+  if lbl.startswith("script "):
+    return "script " + (lbl.split())[-1].split('/')[-1]
+
+  return lbl
+
+
+def graphTree(ga, tree, childCounts):
+  domLimit = 10
+  skipShape = True
+
+  # XXX Only keep nodes dominated by the self-hosting global.
+  #for x in tree:
+  #  if nodeLabel(ga, x) == "self-hosting-global":
+  #    tree = copyReachableTree(ga, tree, x)
+  #    break
+
+  #newRoots = []
+  #for x in tree:
+  #  lbl = nodeLabel(ga, x)
+  #  if lbl == "LexicalEnvironment" or lbl == "NonSyntacticVariablesObject":
+  #    newRoots.append(x)
+  #tree = copyReachableTree(ga, tree, newRoots)
+
+  f = open("/home/amccreight/logs/content/tree.dot", "w")
+  f.write("digraph G {\n")
+  for x, children in tree.iteritems():
+    if x == fake_root_label or childCounts[x] < domLimit:
+      continue
+    lbl = nodeLabel(ga, x)
+    if skipShape and lbl == 'shape':
+      continue
+    anyTrimmed = False
+    for c in children:
+      if childCounts[c] < domLimit or (skipShape and nodeLabel(ga, c) == 'shape'):
+        anyTrimmed = True
+        continue
+      f.write("  N{} -> N{} [len=2];\n".format(x, c))
+      # XXX print out a label somehow....
+    if anyTrimmed:
+      count = " " + str(childCounts[x])
+    else:
+      count = ""
+
+    displayLbl = displayLabel(ga, g, x, lbl)
+    f.write('  N{} [label="{}{}"]\n'.format(x, displayLbl, count))
+
+  f.write("}\n")
+  f.close()
+
+#######
 
 def loadGraph(fname):
   sys.stdout.write('Parsing {0}. '.format(fname))
@@ -189,14 +275,16 @@ def getNumChildren(ga, t):
 
   del childCounts[fake_root_label]
 
-  counts = {}
-  for x, n in childCounts.iteritems():
-    counts.setdefault(n, []).append(x)
+  return childCounts
 
-  n = 0
-  for x in reversed(sorted(counts.keys())):
-    for c in counts[x]:
-      print x, c, ga.nodeLabels[c]
+  #counts = {}
+  #for x, n in childCounts.iteritems():
+  #  counts.setdefault(n, []).append(x)
+
+  #n = 0
+  #for x in reversed(sorted(counts.keys())):
+  #  for c in counts[x]:
+  #    print x, c, ga.nodeLabels[c]
 
 
 
@@ -208,7 +296,9 @@ if __name__ == "__main__":
     (g, ga) = loadGraph(args.file_name)
     t = domTreeRoots(g, ga.roots)
 
-    getNumChildren(ga, t)
+    childCounts = getNumChildren(ga, t)
+    graphTree(ga, t, childCounts)
+
 
     #for node, children in t.iteritems():
     #  print node, ' '.join(children)
