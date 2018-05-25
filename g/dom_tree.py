@@ -199,20 +199,25 @@ def copyReachableTree(ga, tree, roots):
   return newTree
 
 
-def displayLabel(ga, g, x, lbl):
+def displayLabel(ga, g, sizes, x, lbl):
+  if sizeLabel:
+    sizeSuffix = " ({} bytes)".format(sizes[x])
+  else:
+    sizeSuffix = ""
+
   if lbl == "Object":
-    return x
+    return x + sizeSuffix
 
   if lbl == "NonSyntacticVariablesObject":
     for y in g[x]:
       if "__URI__" in ga.edgeLabels.get(x, {}).get(y, []):
         yLbl = nodeLabel(ga, y)
-        return "NSVO " + (yLbl.split())[-1].split('/')[-1]
+        return "NSVO " + (yLbl.split())[-1].split('/')[-1]  + sizeSuffix
 
   if lbl.startswith("script "):
-    return "script " + (lbl.split())[-1].split('/')[-1]
+    return "script " + (lbl.split())[-1].split('/')[-1] + sizeSuffix
 
-  return lbl
+  return lbl + sizeSuffix
 
 
 def computeSizes(ga, tree):
@@ -243,7 +248,44 @@ def computeSizes(ga, tree):
   return sizes
 
 
-def graphTree(args, ga, tree, childCounts):
+def textSizeTree(args, ga, g, tree):
+  assert sizeLabel
+
+  sizeThreshold = 10000
+
+  sizes = computeSizes(ga, tree)
+
+  def sortedChildren(x):
+    return sorted(tree[x], reverse=True, key=lambda y: sizes[y])
+
+  def helper(x, depth):
+    xSize = sizes[x]
+    if xSize < sizeThreshold:
+      return False
+    lbl = nodeLabel(ga, x)
+    if lbl == "shape":
+      return False
+    sys.stdout.write("|")
+    for i in range(depth):
+      sys.stdout.write("--")
+    lbl = displayLabel(ga, g, sizes, x, lbl)
+    sys.stdout.write(" " + lbl)
+    sys.stdout.write("\n")
+
+    for y in sortedChildren(x):
+      helper(y, depth + 1)
+
+    return True
+
+
+  # Start with children of the fake node.
+
+  for x in sortedChildren(fake_root_label):
+    if helper(x, 0):
+      sys.stdout.write("\n")
+
+
+def graphTree(args, ga, g, tree, childCounts):
   domLimit = 20
   skipShape = True
 
@@ -283,7 +325,7 @@ def graphTree(args, ga, tree, childCounts):
     else:
       count = ""
 
-    displayLbl = displayLabel(ga, g, x, lbl)
+    displayLbl = displayLabel(ga, g, sizes, x, lbl)
 
     if sizeLabel:
       displayLbl += " ({} bytes)".format(sizes[x])
@@ -341,10 +383,11 @@ if __name__ == "__main__":
     (g, ga) = loadGraph(args.file_name)
     t = domTreeRoots(g, ga.roots)
 
-    childCounts = getNumChildren(ga, t)
-
     if args.dotFileName:
-      graphTree(args, ga, t, childCounts)
+      childCounts = getNumChildren(ga, t)
+      graphTree(args, ga, g, t, childCounts)
+    else:
+      textSizeTree(args, ga, g, t)
 
     #for node, children in t.iteritems():
     #  print node, ' '.join(children)
