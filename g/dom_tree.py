@@ -167,10 +167,16 @@ def domTree(g, source_label):
 
 # Graphviz output of a tree.
 
+# Set this to True if using a log that includes my patch to output the
+# size of each object in the log.
+sizeLabel = True
+
 def nodeLabel(ga, x):
   if x == fake_root_label:
     return fake_root_label
   l = ga.nodeLabels.get(x)
+  if sizeLabel and " SIZE::" in l:
+    l = l.split(" SIZE:: ")[0]
   if l.endswith(' <no private>'):
     l = l[:-len(' <no private>')]
   return l
@@ -197,7 +203,8 @@ def displayLabel(ga, g, x, lbl):
   if lbl == "NonSyntacticVariablesObject":
     for y in g[x]:
       if "__URI__" in ga.edgeLabels.get(x, {}).get(y, []):
-        return "NSVO " + (ga.nodeLabels.get(y).split())[-1].split('/')[-1]
+        yLbl = nodeLabel(ga, y)
+        return "NSVO " + (yLbl.split())[-1].split('/')[-1]
 
   if lbl.startswith("script "):
     return "script " + (lbl.split())[-1].split('/')[-1]
@@ -205,9 +212,40 @@ def displayLabel(ga, g, x, lbl):
   return lbl
 
 
+def computeSizes(ga, tree):
+  # This function requires the extra size logging.
+  assert sizeLabel
+
+  sizes = {}
+
+  def helper(x):
+    if x in sizes:
+      return
+
+    mySize = 8
+    lbl = ga.nodeLabels.get(x, "")
+    if "SIZE::" in lbl:
+      lbl = lbl.split("SIZE:: ")
+      assert len(lbl) == 2 # XXX This should only happen with my hacky expanded reporting.
+      mySize = int(lbl[1])
+
+    for c in tree.get(x, set([])):
+      helper(c)
+      mySize += sizes[c]
+
+    sizes[x] = mySize
+
+  for x, children in tree.iteritems():
+    helper(x)
+  return sizes
+
+
 def graphTree(ga, tree, childCounts):
-  domLimit = 10
+  domLimit = 20
   skipShape = True
+
+  if sizeLabel:
+    sizes = computeSizes(ga, tree)
 
   # XXX Only keep nodes dominated by the self-hosting global.
   #for x in tree:
@@ -235,7 +273,7 @@ def graphTree(ga, tree, childCounts):
       if childCounts[c] < domLimit or (skipShape and nodeLabel(ga, c) == 'shape'):
         anyTrimmed = True
         continue
-      f.write("  N{} -> N{} [len=2];\n".format(x, c))
+      f.write("  N{} -> N{} [len=1];\n".format(x, c))
       # XXX print out a label somehow....
     if anyTrimmed:
       count = " " + str(childCounts[x])
@@ -243,10 +281,14 @@ def graphTree(ga, tree, childCounts):
       count = ""
 
     displayLbl = displayLabel(ga, g, x, lbl)
+
+    if sizeLabel:
+      displayLbl += " ({} bytes)".format(sizes[x])
     f.write('  N{} [label="{}{}"]\n'.format(x, displayLbl, count))
 
   f.write("}\n")
   f.close()
+
 
 #######
 
