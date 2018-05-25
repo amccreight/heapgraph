@@ -15,6 +15,9 @@ import argparse
 parser = argparse.ArgumentParser(description='Compute the dominator tree of a GC log')
 parser.add_argument('file_name',
                     help='GC graph file name')
+parser.add_argument('--dot', dest='dotFileName', type=str,
+                    help='Output a dot file with the given name for use with Graphviz.')
+
 
 #parser.add_argument('target',
 #                    help='address of target object')
@@ -240,7 +243,7 @@ def computeSizes(ga, tree):
   return sizes
 
 
-def graphTree(ga, tree, childCounts):
+def graphTree(args, ga, tree, childCounts):
   domLimit = 20
   skipShape = True
 
@@ -260,7 +263,7 @@ def graphTree(ga, tree, childCounts):
   #    newRoots.append(x)
   #tree = copyReachableTree(ga, tree, newRoots)
 
-  f = open("/home/amccreight/logs/content/tree.dot", "w")
+  f = open(args.dotFileName, "w")
   f.write("digraph G {\n")
   for x, children in tree.iteritems():
     if x == fake_root_label or childCounts[x] < domLimit:
@@ -339,8 +342,9 @@ if __name__ == "__main__":
     t = domTreeRoots(g, ga.roots)
 
     childCounts = getNumChildren(ga, t)
-    graphTree(ga, t, childCounts)
 
+    if args.dotFileName:
+      graphTree(args, ga, t, childCounts)
 
     #for node, children in t.iteritems():
     #  print node, ' '.join(children)
