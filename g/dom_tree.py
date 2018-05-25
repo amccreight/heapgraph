@@ -251,11 +251,13 @@ def computeSizes(ga, tree):
 def textSizeTree(args, ga, g, tree):
   assert sizeLabel
 
-  sizeThreshold = 10000
+  sizeThreshold = 1000
 
   sizes = computeSizes(ga, tree)
 
   def sortedChildren(x):
+    if not x in tree:
+      return []
     return sorted(tree[x], reverse=True, key=lambda y: sizes[y])
 
   def helper(x, depth):
