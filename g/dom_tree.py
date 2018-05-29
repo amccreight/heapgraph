@@ -11,13 +11,16 @@ import re
 import parse_gc_graph
 import argparse
 
+from types import StringType
+
 
 parser = argparse.ArgumentParser(description='Compute the dominator tree of a GC log')
 parser.add_argument('file_name',
                     help='GC graph file name')
 parser.add_argument('--dot', dest='dotFileName', type=str,
                     help='Output a dot file with the given name for use with Graphviz.')
-
+parser.add_argument('--script-split', dest='scriptSplit', action='store_true',
+                    help='Group trees by script, if they contain only one script-y thing')
 
 #parser.add_argument('target',
 #                    help='address of target object')
@@ -243,22 +246,136 @@ def computeSizes(ga, tree):
 
     sizes[x] = mySize
 
-  for x, children in tree.iteritems():
+  for x in tree:
     helper(x)
   return sizes
 
 
+# Look through a DOM tree for any scripts.
+# XXX Could also associate an NSVO with a specific script.
+def computeScripts(ga, tree):
+  # This maps nodes to either:
+  # - 1 if the node dominates multiple scripts.
+  # - a string with the script name if the node dominates one script.
+  # - 0 if the node dominates no scripts.
+  scripts = {}
+
+  def helper(x):
+    if x in scripts:
+      return scripts[x]
+
+    lbl = nodeLabel(ga, x)
+    if lbl.startswith("script "):
+      scriptName = (lbl.split())[-1].split('/')[-1].split(':')[0]
+    else:
+      scriptName = 0
+
+    for c in tree.get(x, set([])):
+      newScriptName = helper(c)
+      if scriptName == 1 or newScriptName == 1:
+        scriptName = 1
+        continue
+      if scriptName == 0:
+        scriptName = newScriptName
+        continue
+      if newScriptName == 0:
+        continue
+      assert type(scriptName) is StringType
+      assert type(newScriptName) is StringType
+      if scriptName != newScriptName:
+        scriptName = 1
+
+    scripts[x] = scriptName
+    return scriptName
+
+
+  for x in tree:
+    helper(x)
+
+  return scripts
+
+
 def textSizeTree(args, ga, g, tree):
+  showByScripts = args.scriptSplit
+
   assert sizeLabel
 
-  sizeThreshold = 1000
+  sizeThreshold = 5000
 
+  if showByScripts:
+    scripts = computeScripts(ga, tree)
   sizes = computeSizes(ga, tree)
 
-  def sortedChildren(x):
+  def sortedChildren(tree, sizes, x):
     if not x in tree:
       return []
     return sorted(tree[x], reverse=True, key=lambda y: sizes[y])
+
+  def splitByScript():
+    scriptTrees = {}
+    for x in tree[fake_root_label]:
+      scriptTrees.setdefault(scripts[x], []).append(x)
+
+    if 1 in scriptTrees:
+      print 'Multiple scripts'
+      print '----------------'
+      for x in sortedChildren(scriptTrees, sizes, 1):
+        if helper(x, 0):
+          sys.stdout.write("\n")
+      print
+      del scriptTrees[1]
+
+    if 0 in scriptTrees:
+      print 'No script found'
+      print '---------------'
+      for x in sortedChildren(scriptTrees, sizes, 0):
+        if helper(x, 0):
+          sys.stdout.write("\n")
+      print
+      del scriptTrees[0]
+
+    scriptSizes = {}
+    for script, trees in scriptTrees.iteritems():
+      mySize = 0
+      for x in trees:
+        mySize += sizes[x]
+      scriptSizes[script] = mySize
+      #print script, mySize
+
+    for script in sorted(filter(lambda x: scriptSizes[x] >= sizeThreshold, scriptTrees), reverse=True,
+                         key=lambda x: scriptSizes[x]):
+      print "{} ({} bytes)".format(script, scriptSizes[script])
+      print '------------------------------'
+      for x in sortedChildren(scriptTrees, sizes, script):
+        if helper(x, 0):
+          sys.stdout.write("\n")
+      print
+
+    # XXX Bleah, sort the script names by the total size of the nodes in it....
+
+    # XXX Maybe create a fake node and let the existing stuff work??
+
+    # XXX Filter out scripts that meet the threshold.
+
+    exit(0)
+    # XXX
+    scriptsMap, scriptsSizes = splitByScript()
+    # XXX Bleah, sort the script names by the total size of the nodes in it....
+
+    # XXX Maybe create a fake node and let the existing stuff work??
+
+    # XXX Filter out scripts that meet the threshold.
+
+    for scriptName in scriptsMap:
+      print "SCRIPT NAME", scriptName
+      for x in sortedChildren(scriptsMap, scriptsSizes, scriptName):
+        if helper(x, 0):
+          sys.stdout.write("\n")
+      sys.stdout.write("\n")
+
+    exit(0)
+
+    return scriptTrees
 
   def helper(x, depth):
     xSize = sizes[x]
@@ -274,17 +391,18 @@ def textSizeTree(args, ga, g, tree):
     sys.stdout.write(" " + lbl)
     sys.stdout.write("\n")
 
-    for y in sortedChildren(x):
+    for y in sortedChildren(tree, sizes, x):
       helper(y, depth + 1)
 
     return True
 
 
-  # Start with children of the fake node.
-
-  for x in sortedChildren(fake_root_label):
-    if helper(x, 0):
-      sys.stdout.write("\n")
+  if showByScripts:
+    splitByScript()
+  else:
+    for x in sortedChildren(tree, sizes, fake_root_label):
+      if helper(x, 0):
+        sys.stdout.write("\n")
 
 
 def graphTree(args, ga, g, tree, childCounts):
