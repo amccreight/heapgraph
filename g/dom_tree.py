@@ -252,7 +252,6 @@ def computeSizes(ga, tree):
 
 
 # Look through a DOM tree for any scripts.
-# XXX Could also associate an NSVO with a specific script.
 def computeScripts(ga, tree):
   # This maps nodes to either:
   # - 1 if the node dominates multiple scripts.
@@ -265,10 +264,15 @@ def computeScripts(ga, tree):
       return scripts[x]
 
     lbl = nodeLabel(ga, x)
+    scriptName = 0
     if lbl.startswith("script "):
       scriptName = (lbl.split())[-1].split('/')[-1].split(':')[0]
-    else:
-      scriptName = 0
+    elif lbl == "NonSyntacticVariablesObject":
+      for y in g[x]:
+        if "__URI__" in ga.edgeLabels.get(x, {}).get(y, []):
+          yLbl = nodeLabel(ga, y)
+          scriptName = (yLbl.split())[-1].split('/')[-1]
+          break
 
     for c in tree.get(x, set([])):
       newScriptName = helper(c)
@@ -300,7 +304,7 @@ def textSizeTree(args, ga, g, tree):
 
   assert sizeLabel
 
-  sizeThreshold = 5000
+  sizeThreshold = 1000
 
   if showByScripts:
     scripts = computeScripts(ga, tree)
@@ -316,23 +320,10 @@ def textSizeTree(args, ga, g, tree):
     for x in tree[fake_root_label]:
       scriptTrees.setdefault(scripts[x], []).append(x)
 
-    if 1 in scriptTrees:
-      print 'Multiple scripts'
-      print '----------------'
-      for x in sortedChildren(scriptTrees, sizes, 1):
-        if helper(x, 0):
-          sys.stdout.write("\n")
-      print
-      del scriptTrees[1]
-
-    if 0 in scriptTrees:
-      print 'No script found'
-      print '---------------'
-      for x in sortedChildren(scriptTrees, sizes, 0):
-        if helper(x, 0):
-          sys.stdout.write("\n")
-      print
-      del scriptTrees[0]
+    multiScripts = scriptTrees.get(1, [])
+    del scriptTrees[1]
+    noScripts = scriptTrees.get(0, [])
+    del scriptTrees[0]
 
     scriptSizes = {}
     for script, trees in scriptTrees.iteritems():
@@ -351,31 +342,22 @@ def textSizeTree(args, ga, g, tree):
           sys.stdout.write("\n")
       print
 
-    # XXX Bleah, sort the script names by the total size of the nodes in it....
-
-    # XXX Maybe create a fake node and let the existing stuff work??
-
-    # XXX Filter out scripts that meet the threshold.
-
-    exit(0)
-    # XXX
-    scriptsMap, scriptsSizes = splitByScript()
-    # XXX Bleah, sort the script names by the total size of the nodes in it....
-
-    # XXX Maybe create a fake node and let the existing stuff work??
-
-    # XXX Filter out scripts that meet the threshold.
-
-    for scriptName in scriptsMap:
-      print "SCRIPT NAME", scriptName
-      for x in sortedChildren(scriptsMap, scriptsSizes, scriptName):
+    if multiScripts:
+      print 'Multiple scripts'
+      print '----------------'
+      for x in sorted(multiScripts, reverse=True, key=lambda y: sizes[y]):
         if helper(x, 0):
           sys.stdout.write("\n")
-      sys.stdout.write("\n")
+      print
 
-    exit(0)
+    if noScripts:
+      print 'No script found'
+      print '---------------'
+      for x in sorted(noScripts, reverse=True, key=lambda y: sizes[y]):
+        if helper(x, 0):
+          sys.stdout.write("\n")
+      print
 
-    return scriptTrees
 
   def helper(x, depth):
     xSize = sizes[x]
