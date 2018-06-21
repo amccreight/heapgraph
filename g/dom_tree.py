@@ -45,14 +45,20 @@ def checkDomTree(g, source):
 
 def computeReachable(g, source, ignore):
   s = set()
-  def dfs(x):
+  workList = [source]
+
+  while workList:
+    x = workList.pop()
     if x == ignore:
-      return
+      continue
     s.add(x)
+    children = []
     for y in g.get(x, []):
       if not y in s:
-        dfs(y)
-  dfs(source)
+        children.append(y)
+    children.reverse()
+    workList = workList + children
+
   return s
 
 # Compute the dominator tree, but using the naive algorithm.
@@ -108,33 +114,48 @@ def domTree(g, source_label):
   sdom = {}
   rev_g = {} # rg
 
+  work_list = [(source_label, None)]
+
   # Compute the DFS tree.
-  def dfsVisit(x_label):
+  while work_list:
+    (x_label, x_parent) = work_list.pop()
+
+    if x_label in label_preorder:
+      assert not x_parent is None
+      x = label_preorder[x_label]
+      rev_g.setdefault(x, []).append(x_parent)
+      continue
+
     x = len(preorder_labels)
     preorder_labels.append(x_label)
     label_preorder[x_label] = x
     sdom[x] = x
     dom[x] = x
+    if not x_parent is None:
+      tree_parent[x] = x_parent
+      rev_g.setdefault(x, []).append(x_parent)
+
     if not x_label in g:
-      return
+      continue
+    children = []
     for y_label in g[x_label]:
       if y_label == x_label:
         continue
       if not y_label in label_preorder:
-        dfsVisit(y_label)
-        y = label_preorder[y_label]
-        tree_parent[y] = x
+        children.append((y_label, x))
       else:
         y = label_preorder[y_label]
-      rev_g.setdefault(y, []).append(x)
+        rev_g.setdefault(y, []).append(x)
 
-  dfsVisit(source_label)
+    children.reverse()
+    work_list = work_list + children
 
   # Compute the semi-dominator and whatever the other thing is.
   bucket = {}
   ds_parent = {}
   path_min = {}
 
+  # XXX recursion. Max depth 180 on an example log.
   def find(x):
     if not x in ds_parent:
       return x
@@ -259,6 +280,7 @@ def computeScripts(ga, tree):
   # - 0 if the node dominates no scripts.
   scripts = {}
 
+  # XXX recursion. Max depth 141 on an example log.
   def helper(x):
     if x in scripts:
       return scripts[x]
@@ -479,6 +501,55 @@ def getNumChildren(ga, t):
 
 
 if __name__ == "__main__":
+  source_label = 'A'
+  label_preorder = {}
+
+  g = {'A': ['B', 'C'],
+       'B': ['D', 'E']}
+
+  preorder_labels = []
+
+  if False:
+    def dfsVisit(x_label):
+      x = len(preorder_labels)
+      print x_label, "->", x
+      preorder_labels.append(x_label)
+      label_preorder[x_label] = x
+      if not x_label in g:
+        return
+      for y_label in g[x_label]:
+        if y_label == x_label:
+          continue
+        if not y_label in label_preorder:
+          dfsVisit(y_label)
+          y = label_preorder[y_label]
+        else:
+          y = label_preorder[y_label]
+
+    dfsVisit(source_label)
+  elif False:
+    work_list = [(source_label, None)]
+    while work_list:
+      print work_list
+      (x_label, x_parent) = work_list.pop()
+      x = len(preorder_labels)
+      print x_label, "->", x
+      preorder_labels.append(x_label)
+      label_preorder[x_label] = x
+
+      if not x_label in g:
+        continue
+      children = []
+      for y_label in g[x_label]:
+        if y_label == x_label:
+          continue
+        if not y_label in label_preorder:
+          children.append((y_label, x))
+        else:
+          y = label_preorder[y_label]
+
+      children.reverse()
+      work_list = work_list + children
 
   if True:
     args = parser.parse_args()
@@ -497,7 +568,7 @@ if __name__ == "__main__":
     #print t.keys()
     #print t[args.target]
 
-  elif True:
+  else:
     # Simple test cases.
     g1 = ("c",
           {
@@ -525,6 +596,16 @@ if __name__ == "__main__":
             "K": ["R", "I"],
             "L": ["H"],
           })
+
+    # Small chunk of g2 example.
+    g3 = ("R",
+          {
+            "R": ["B", "A"],
+            "A": ["D"],
+            "B": ["A", "D"],
+            "D": ["R"],
+          })
+
     g = g2
     checkDomTree(g[1], g[0])
 
