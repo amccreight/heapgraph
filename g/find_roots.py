@@ -49,6 +49,10 @@ parser.add_argument('--black-roots-only', '-bro', dest='black_roots_only', actio
                     default=False,
                     help='If this is set, only trace from black roots.  Otherwise, also trace from gray roots.')
 
+parser.add_argument('--black-paths-only', '-bpo', dest='black_paths_only', action='store_true',
+                    default=False,
+                    help='If this is set, only trace through black objects.')
+
 parser.add_argument('--string-mode', '-sm', dest='string_mode', action='store_true',
                     default=False,
                     help='Match any string that has as a prefix the target passed in as the second argument.')
@@ -244,6 +248,11 @@ def findRootsBFS(args, g, ga, target):
     # Check the monotonicity of workList.
     assert dist >= limit
     limit = dist
+
+    if args.black_paths_only:
+      if x in ga.colorNodes['G'] or x in ga.colorNodes['W']:
+        continue
+      assert x in ga.colorNodes['B'] or x == startObject
 
     if x == target:
       # Found target: nothing to do?
