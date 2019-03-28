@@ -45,11 +45,11 @@ parser.add_argument('--print-reverse', '-r', dest='print_reverse', action='store
 parser.add_argument('--num-paths', '-np', type=int, dest='max_num_paths',
                     help='Only print out the first so many paths for each target.')
 
-parser.add_argument('--black-roots-only', '-bro', dest='black_roots_only', action='store_true',
+parser.add_argument('--only-black-roots', '-obr', dest='only_black_roots', action='store_true',
                     default=False,
                     help='If this is set, only trace from black roots.  Otherwise, also trace from gray roots.')
 
-parser.add_argument('--black-paths-only', '-bpo', dest='black_paths_only', action='store_true',
+parser.add_argument('--only-black-paths', '-obp', dest='only_black_paths', action='store_true',
                     default=False,
                     help='If this is set, only trace through black objects.')
 
@@ -231,7 +231,7 @@ def findRootsBFS(args, g, ga, target):
   startObject = 'FAKE START OBJECT'
   rootEdges = set([])
   for r, isBlack in ga.roots.iteritems():
-    if args.black_roots_only and not isBlack:
+    if args.only_black_roots and not isBlack:
       continue
     rootEdges.add(r)
 
@@ -249,7 +249,7 @@ def findRootsBFS(args, g, ga, target):
     assert dist >= limit
     limit = dist
 
-    if args.black_paths_only:
+    if args.only_black_paths:
       if x in ga.colorNodes['G'] or x in ga.colorNodes['W']:
         continue
       assert x in ga.colorNodes['B'] or x == startObject
@@ -347,7 +347,7 @@ def findRootsDFS(args, g, ga, x):
     if y in visited:
       return False
     visited.add(y)
-    if y in roots and (not args.black_roots_only or roots[y]): # roots[y] is true for black roots
+    if y in roots and (not args.only_black_roots or roots[y]): # roots[y] is true for black roots
       if args.max_num_paths == None or numPathsFound[0] < args.max_num_paths:
         path = copy.copy(revPath)
         path.reverse()
