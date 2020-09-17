@@ -314,6 +314,10 @@ def findRootsBFS(args, g, ga, target):
       print_path(args, ga, path)
     else:
       print 'Didn\'t find a path.'
+
+  # Remove the fake object so the graph can be queried again.
+  del g[startObject]
+
   return
 
 
