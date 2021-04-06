@@ -21,9 +21,12 @@ parser.add_argument('--dot', dest='dotFileName', type=str,
                     help='Output a dot file with the given name for use with Graphviz.')
 parser.add_argument('--script-split', dest='scriptSplit', action='store_true',
                     help='Group trees by script, if they contain only one script-y thing')
+parser.add_argument('--path', dest='path', type=str,
+                    help='Output the path in the dom tree to a specific object')
+parser.add_argument('--only-black-roots', '-obr', dest='only_black_roots', action='store_true',
+                    default=False,
+                    help='If this is set, only trace from black roots.  Otherwise, also trace from gray roots.')
 
-#parser.add_argument('target',
-#                    help='address of target object')
 
 def printTree(t):
   for x, children in t.iteritems():
@@ -94,11 +97,13 @@ def slowDomTree(g, source):
 
 fake_root_label = "root"
 
-def domTreeRoots(g, roots):
+def domTreeRoots(args, g, roots):
   # Set up a fake node for the roots.
   assert not fake_root_label in g
   g[fake_root_label] = []
-  for r in roots:
+  for r, isBlack in roots.iteritems():
+    if args.only_black_roots and not isBlack:
+      continue
     g[fake_root_label].append(r)
   return domTree(g, fake_root_label)
 
@@ -459,6 +464,39 @@ def graphTree(args, ga, g, tree, childCounts):
   f.close()
 
 
+# For a given object x, show the path from the root in the dominator
+# tree to that object.
+def domPath(root, t, x):
+  stack = [[root]]
+  path = []
+
+  while stack:
+    top = stack[-1]
+    if not top:
+      stack.pop()
+      path.pop()
+      continue
+    y = top.pop()
+    path.append(y)
+    if x == y:
+      break
+    stack.append(t.get(y, []))
+
+  # Don't print the root.
+  assert(path[0] == root)
+  path.pop(0)
+
+  print
+
+  if not path:
+    print("No path found")
+    return
+
+  print("Dominator tree path:")
+  for p in path:
+    sys.stdout.write('  {0} [{1}] -->\n'.format(p, ga.nodeLabels[p][:50]))
+
+
 #######
 
 def loadGraph(fname):
@@ -554,11 +592,13 @@ if __name__ == "__main__":
   if True:
     args = parser.parse_args()
     (g, ga) = loadGraph(args.file_name)
-    t = domTreeRoots(g, ga.roots)
+    t = domTreeRoots(args, g, ga.roots)
 
     if args.dotFileName:
       childCounts = getNumChildren(ga, t)
       graphTree(args, ga, g, t, childCounts)
+    if args.path:
+      domPath(fake_root_label, t, args.path)
     else:
       textSizeTree(args, ga, g, t)
 
@@ -609,4 +649,7 @@ if __name__ == "__main__":
     g = g2
     checkDomTree(g[1], g[0])
 
-
+    if False:
+      # Simple case for the dom tree path printing code.
+      myTree = domTree(g[1], g[0])
+      domPath("R", myTree, "J")
