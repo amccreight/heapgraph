@@ -9,10 +9,10 @@ import re
 import copy
 from collections import namedtuple
 from collections import deque
-import parse_gc_graph
+from . import parse_gc_graph
 import argparse
-from dotify_paths import outputDotFile
-from dotify_paths import add_dot_mode_path
+from .dotify_paths import outputDotFile
+from .dotify_paths import add_dot_mode_path
 
 ########################################################
 # Find the objects that are rooting a particular object
@@ -121,7 +121,7 @@ def print_edge(args, ga, x, y):
 
 
 def explain_root(ga, root):
-  print "via", ga.rootLabels[root], ":"
+  print("via", ga.rootLabels[root], ":")
 
 # print out the path to an object that has been discovered
 def basic_print_path(args, ga, path):
@@ -138,8 +138,8 @@ def basic_print_path(args, ga, path):
     sys.stdout.write('\n')
     prev = p
 
-  print
-  print
+  print()
+  print()
 
 
 def print_simple_node(ga, x):
@@ -153,7 +153,7 @@ def simple_explain_root(ga, root):
   l = re.sub(r'0x[0-9a-f]{8}', '*', ga.rootLabels[root])
   #l = addrPatt.sub("ADDR", ga.rootLabels[root])
   #l = ga.rootLabels[root]
-  print "via", l,
+  print("via", l, end=' ')
 
 # produce a simplified version of the path, with the intent of
 # eliminating differences that are uninteresting with a large set of
@@ -179,7 +179,7 @@ def print_simple_path(args, ga, path):
     sys.stdout.write(' ')
     simple_explain_root(ga, path[-1])
 
-  print
+  print()
 
 
 def print_path(args, ga, path):
@@ -230,7 +230,7 @@ def findRootsBFS(args, g, ga, target):
   # add it to the graph.
   startObject = 'FAKE START OBJECT'
   rootEdges = set([])
-  for r, isBlack in ga.roots.iteritems():
+  for r, isBlack in ga.roots.items():
     if args.only_black_roots and not isBlack:
       continue
     rootEdges.add(r)
@@ -313,7 +313,7 @@ def findRootsBFS(args, g, ga, target):
       path.reverse()
       print_path(args, ga, path)
     else:
-      print 'Didn\'t find a path.'
+      print('Didn\'t find a path.')
 
   # Remove the fake object so the graph can be queried again.
   del g[startObject]
@@ -328,13 +328,13 @@ def findRootsBFS(args, g, ga, target):
 
 def reverseGraph(g):
   g2 = {}
-  print 'Reversing graph.',
+  print('Reversing graph.', end=' ')
   sys.stdout.flush()
-  for src, dsts in g.iteritems():
+  for src, dsts in g.items():
     for d in dsts:
       g2.setdefault(d, set([])).add(src)
-  print 'Done.'
-  print
+  print('Done.')
+  print()
   return g2
 
 
@@ -376,11 +376,11 @@ def findRootsDFS(args, g, ga, x):
   findRootsDFSHelper(x)
 
   if numPathsFound[0] == 0:
-    print 'No roots found.'
+    print('No roots found.')
   elif args.max_num_paths == None or numPathsFound[0] <= args.max_num_paths:
-    print 'Found and displayed', numPathsFound[0], 'paths.'
+    print('Found and displayed', numPathsFound[0], 'paths.')
   else:
-    print 'Displayed', args.max_num_paths, 'out of', numPathsFound[0], 'total paths found.'
+    print('Displayed', args.max_num_paths, 'out of', numPathsFound[0], 'total paths found.')
 
 
 ########################################################
@@ -394,7 +394,7 @@ def loadGraph(fname):
   #sys.stdout.write('Converting to single graph. ')
   #sys.stdout.flush()
   g = parse_gc_graph.toSinglegraph(g)
-  print 'Done loading graph.',
+  print('Done loading graph.', end=' ')
 
   return (g, ga)
 
@@ -402,7 +402,7 @@ def loadGraph(fname):
 def stringTargets(ga, stringTarget):
   targs = []
 
-  for addr, lbl in ga.nodeLabels.iteritems():
+  for addr, lbl in ga.nodeLabels.items():
     if not lbl.startswith('string '):
       continue
     s = lbl[7:]
@@ -425,13 +425,13 @@ def selectTargets(args, g, ga):
   else:
     # look for objects with a class name prefixes, not a particular object
     targs = []
-    for x in g.keys():
+    for x in list(g.keys()):
       if ga.nodeLabels.get(x, '')[0:len(args.target)] == args.target:
         if targetDebug:
           sys.stderr.write('Found object {}. '.format(x))
         targs.append(x)
     if targs == []:
-      print 'No matching class names found.'
+      print('No matching class names found.')
     else:
       if targetDebug:
         sys.stderr.write('\n')
@@ -450,8 +450,8 @@ def findGCRoots():
       if args.use_dfs:
         findRootsDFS(args, g, ga, a)
       else:
-        print
-        print
+        print()
+        print()
         findRootsBFS(args, g, ga, a)
     else:
       sys.stdout.write('{0} is not in the graph.\n'.format(a))

@@ -199,7 +199,7 @@ def parseResults (f):
 countPatt = re.compile ('0x0 \[rc=([0-9]+)\] COUNT_ROOTS\r?$')
 
 def parseCounts(f):
-  print 'Warning!  Using experimental extension for parsing roots.  May be buggy.'
+  print('Warning!  Using experimental extension for parsing roots.  May be buggy.')
   l = f.readline()
   cpm = countPatt.match(l)
   assert(cpm)
@@ -232,9 +232,9 @@ def parseCCEdgeFile (fname):
 # from a source node to a set of its destinations.
 def toSinglegraph (gm):
   g = {}
-  for src, dsts in gm.iteritems():
+  for src, dsts in gm.items():
     d = set([])
-    for dst, k in dsts.iteritems():
+    for dst, k in dsts.items():
       d.add(dst)
     g[src] = d
   return g
@@ -242,62 +242,62 @@ def toSinglegraph (gm):
 
 def reverseMultigraph (gm):
   gm2 = {}
-  for src, dsts in gm.iteritems():
+  for src, dsts in gm.items():
     if not src in gm2:
       gm2[src] = {}
-    for dst, k in dsts.iteritems():
+    for dst, k in dsts.items():
       gm2.setdefault(dst, {})[src] = k
   return gm2
 
 
 def printGraph(g):
-  print 'Graph:'
-  for x, edges in g.iteritems():
+  print('Graph:')
+  for x, edges in g.items():
     sys.stdout.write('  {0}: '.format(x))
-    for e, k in edges.iteritems():
+    for e, k in edges.items():
       for n in range(k):
         sys.stdout.write('{0}, '.format(e))
-    print
+    print()
 
 def printAttribs(ga):
-  print 'RC nodes: ',
-  for x, rc in ga.rcNodes.iteritems():
+  print('RC nodes: ', end=' ')
+  for x, rc in ga.rcNodes.items():
     sys.stdout.write('{0}={1}, '.format(x, rc))
-  print
+  print()
 
-  print 'Marked GC nodes: ',
-  for x, marked in ga.gcNodes.iteritems():
+  print('Marked GC nodes: ', end=' ')
+  for x, marked in ga.gcNodes.items():
     if marked:
       sys.stdout.write('{0}, '.format(x))
-  print
+  print()
 
-  print 'Unmarked GC nodes: ',
-  for x, marked in ga.gcNodes.iteritems():
+  print('Unmarked GC nodes: ', end=' ')
+  for x, marked in ga.gcNodes.items():
     if not marked:
       sys.stdout.write('{0}, '.format(x))
-  print
+  print()
 
-  print 'Node labels: ',
-  for x, l in ga.nodeLabels.iteritems():
+  print('Node labels: ', end=' ')
+  for x, l in ga.nodeLabels.items():
     sys.stdout.write('{0}:{1}, '.format(x, l))
-  print
+  print()
 
-  print 'Edge labels: ',
-  for src, edges in ga.edgeLabels.iteritems():
-    for dst, l in edges.iteritems():
+  print('Edge labels: ', end=' ')
+  for src, edges in ga.edgeLabels.items():
+    for dst, l in edges.items():
       sys.stdout.write('{0}->{1}:{2}, '.format(src, dst, l))
-  print
+  print()
 
 def printResults(r):
-  print 'Known edges: ',
-  for x, k in r[0].iteritems():
+  print('Known edges: ', end=' ')
+  for x, k in r[0].items():
     sys.stdout.write('{0}={1}, '.format(x, k))
-  print
+  print()
 
-  print 'Garbage: ',
+  print('Garbage: ', end=' ')
   for x in r[1]:
     sys.stdout.write('{0}, '.format(x))
-  print
+  print()
 
 
 if __name__ == "__main__":

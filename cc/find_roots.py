@@ -8,7 +8,7 @@ import copy
 import sys
 from collections import deque
 from collections import namedtuple
-import parse_cc_graph
+from . import parse_cc_graph
 import argparse
 import re
 
@@ -120,26 +120,26 @@ def printKnownEdges(args, knownEdges, ga, x):
   if not knownEdges:
     return
 
-  print '    known edges:'
+  print('    known edges:')
   for e in knownEdges:
-    print '       ',
+    print('       ', end=' ')
     print_node(ga, e)
-    print ' ',
+    print(' ', end=' ')
     print_edge(args, ga, e, x)
     sys.stdout.write (' {0}\n'.format(x))
 
 
 # explain why a root is a root
 def explainRoot(args, knownEdgesFn, ga, num_known, roots, root):
-  print '    Root', root,
+  print('    Root', root, end=' ')
 
   if roots[root] == 'gcRoot':
-    print 'is a marked GC object.'
+    print('is a marked GC object.')
     if root in ga.incrRoots:
-      print '    It is an incremental root, which means it was touched during an incremental CC.'
+      print('    It is an incremental root, which means it was touched during an incremental CC.')
     return
   elif roots[root] == 'stopNodeLabel':
-    print 'is an extra root class.'
+    print('is an extra root class.')
     return
 
   assert(roots[root] == 'rcRoot')
@@ -150,12 +150,12 @@ def explainRoot(args, knownEdgesFn, ga, num_known, roots, root):
     assert(root in ga.incrRoots);
     num_unknown = 0
 
-  print 'is a ref counted object with', num_unknown, 'unknown edge(s).'
+  print('is a ref counted object with', num_unknown, 'unknown edge(s).')
 
   printKnownEdges(args, knownEdgesFn(root), ga, root)
 
   if root in ga.incrRoots:
-    print '    It is an incremental root, which means it was touched during an incremental CC.'
+    print('    It is an incremental root, which means it was touched during an incremental CC.')
 
 
 # print out the path to an object that has been discovered
@@ -172,10 +172,10 @@ def printPathBasic(args, knownEdgesFn, ga, num_known, roots, path):
     sys.stdout.write('\n')
     prev = p
 
-  print
+  print()
 
   explainRoot(args, knownEdgesFn, ga, num_known, roots, path[0])
-  print
+  print()
 
 def print_simple_node (ga, x):
   sys.stdout.write ('[{0}]'.format(ga.nodeLabels.get(x, '')))
@@ -194,7 +194,7 @@ def print_simple_path(args, ga, path):
     print_simple_node(ga, p)
     prev = p
 
-  print
+  print()
 
 def print_roots_only_path(f, path):
   f.write(path[0])
@@ -303,7 +303,7 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
 
   def knownEdgesFn(node):
     knownEdges = []
-    for src, dsts in g.iteritems():
+    for src, dsts in g.items():
       if node in dsts and src != startObject:
         knownEdges.append(src)
     return knownEdges
@@ -332,12 +332,12 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
       path.pop()
       path.reverse()
 
-      print
+      print()
 
       printPath(args, knownEdgesFn, ga, num_known, roots, path)
     else:
-      print 'Didn\'t find a path.'
-      print
+      print('Didn\'t find a path.')
+      print()
       printKnownEdges(args, knownEdgesFn(p), ga, p)
 
   del g[startObject]
@@ -352,7 +352,7 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
 def reverseGraph (g):
   g2 = {}
   sys.stderr.write('Reversing graph. ')
-  for src, dsts in g.iteritems():
+  for src, dsts in g.items():
     for d in dsts:
       g2.setdefault(d, set([])).add(src)
   sys.stderr.write('Done.\n\n')
@@ -436,7 +436,7 @@ def findRootsDFS(args, g, ga, num_known, roots, x):
   findRootsInner(x)
 
   if not anyFound[0] and not args.print_roots_only:
-    print 'No roots found for', x
+    print('No roots found for', x)
     knownEdges = reverseGraphKnownEdges(revg, x)
     printKnownEdges(args, knownEdges, ga, x)
 
@@ -458,7 +458,7 @@ def loadGraph(fname):
 def selectRoots(args, g, ga, res):
   roots = {}
 
-  for x in g.keys():
+  for x in list(g.keys()):
     if not args.ignore_rc_roots and (x in res[0] or x in ga.incrRoots):
       roots[x] = 'rcRoot'
     elif not args.ignore_js_roots and (ga.gcNodes.get(x, False) or x in ga.incrRoots):
@@ -476,11 +476,11 @@ addrPatt = re.compile('[A-F0-9]+$|0x[a-f0-9]+$')
 def selectTargets (g, ga, target):
   if addrPatt.match(target):
     if targetDebug:
-      print 'Address matched.'
+      print('Address matched.')
       exit(0)
     return [target]
   if targetDebug:
-    print 'No address found in target.'
+    print('No address found in target.')
     exit(0)
 
   targs = []
@@ -488,7 +488,7 @@ def selectTargets (g, ga, target):
   # Magic target: look for an nsFrameLoader with a refcount of 1.
   if target == 'nsFrameLoader1':
     target = 'nsFrameLoader'
-    for x in g.keys():
+    for x in list(g.keys()):
       if ga.nodeLabels.get(x, '')[0:len(target)] == target and ga.rcNodes[x] == 1:
         targs.append(x)
     if len(targs) == 0:
@@ -497,7 +497,7 @@ def selectTargets (g, ga, target):
     return targs
 
   # look for objects with a class name prefix, not a particular object
-  for x in g.keys():
+  for x in list(g.keys()):
     if ga.nodeLabels.get(x, '')[0:len(target)] == target:
       targs.append(x)
   if targs == []:
@@ -526,7 +526,7 @@ def findCCRoots():
       if args.use_dfs:
         findRootsDFS(args, g, ga, res[0], roots, a)
       else:
-        print
+        print()
         findRootsBFS(args, g, ga, res[0], roots, a)
     else:
       sys.stderr.write('{0} is not in the graph.\n'.format(a))

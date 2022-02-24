@@ -90,13 +90,13 @@ def outputDotFile(args, ga, targs):
     return y
 
   # Remove merged away nodes
-  for x in shape_merge.keys():
+  for x in list(shape_merge.keys()):
     if canon_node(x) != x:
       nodes.remove(x)
 
   # Update the edges for merging
   new_edges = {}
-  for x, dsts in edges.iteritems():
+  for x, dsts in edges.items():
     new_dsts = set([])
     for y in dsts:
       new_dsts.add(canon_node(y))
@@ -113,7 +113,7 @@ def outputDotFile(args, ga, targs):
   outf.write('digraph {\n')
 
   if len(targs) != 1:
-    print 'Had more than one target, arbitrarily picking the first one', targs[0]
+    print('Had more than one target, arbitrarily picking the first one', targs[0])
 
   for n in nodes:
     lbl = ga.nodeLabels.get(n, '')
@@ -168,7 +168,7 @@ def outputDotFile(args, ga, targs):
 
     outf.write('  node [color = {3}, shape = {2}, label="{1}"] q{0};\n'.format(n, lbl, shape, color))
 
-  for x, dsts in edges.iteritems():
+  for x, dsts in edges.items():
     for y in dsts:
       if args.dot_mode_edges:
         lbls = ga.edgeLabels.get(x, {}).get(y, [])
