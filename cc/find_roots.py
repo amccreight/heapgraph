@@ -351,11 +351,11 @@ def findRootsBFS(args, g, ga, num_known, roots, target):
 
 def reverseGraph (g):
   g2 = {}
-  sys.stderr.write('Reversing graph. ')
+  sys.stdout.write('Reversing graph. ')
   for src, dsts in g.items():
     for d in dsts:
       g2.setdefault(d, set([])).add(src)
-  sys.stderr.write('Done.\n\n')
+  sys.stdout.write('Done.\n\n')
   return g2
 
 def reverseGraphKnownEdges(revg, target):
@@ -446,12 +446,12 @@ def findRootsDFS(args, g, ga, num_known, roots, x):
 ########################################################
 
 def loadGraph(fname):
-  sys.stderr.write ('Parsing {0}. '.format(fname))
+  sys.stdout.write ('Parsing {0}. '.format(fname))
   (g, ga, res) = parse_cc_graph.parseCCEdgeFile(fname)
   #sys.stdout.write ('Converting to single graph. ')
   #sys.stdout.flush()
   g = parse_cc_graph.toSinglegraph(g)
-  sys.stderr.write('Done loading graph. ')
+  sys.stdout.write('Done loading graph. ')
   return (g, ga, res)
 
 
@@ -501,8 +501,8 @@ def selectTargets (g, ga, target):
     if ga.nodeLabels.get(x, '')[0:len(target)] == target:
       targs.append(x)
   if targs == []:
-    sys.stderr.write('Didn\'t find any targets.\n')
-    #sys.stderr.write('Guessing that argument ' + target + ' is an address.\n')
+    sys.stdout.write('Didn\'t find any targets.\n')
+    #sys.stdout.write('Guessing that argument ' + target + ' is an address.\n')
     #targs = [target]
 
   return targs
@@ -511,7 +511,7 @@ def selectTargets (g, ga, target):
 def findCCRoots():
   args = parser.parse_args()
 
-  (g, ga, res) = loadGraph (args.file_name)
+  (g, ga, res) = loadGraph(args.file_name)
 
   roots = selectRoots(args, g, ga, res)
   targs = selectTargets(g, ga, args.target)
@@ -529,7 +529,7 @@ def findCCRoots():
         print()
         findRootsBFS(args, g, ga, res[0], roots, a)
     else:
-      sys.stderr.write('{0} is not in the graph.\n'.format(a))
+      sys.stdout.write('{0} is not in the graph.\n'.format(a))
 
   if args.output_to_file:
     args.output_file.close()
