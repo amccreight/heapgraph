@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -94,7 +94,7 @@ def canonize_label(l):
 # along with an ordered list of the domain of the output map.
 def invert_counts_map(counts_map, min_times):
   inv_counts_map = {}
-  for l, n in counts_map.iteritems():
+  for l, n in counts_map.items():
     if n < min_times:
       continue
     inv_counts_map.setdefault(n, []).append(l)
@@ -114,7 +114,7 @@ def print_inv_counts_map(inv_counts_map, inv_domain, num_to_show):
       if num_printed == num_to_show:
         break
       num_printed += 1
-      print '%(num)8d %(label)s' % {'num':count, 'label':l}
+      print('%(num)8d %(label)s' % {'num':count, 'label':l})
 
 
 def analyze_nodes(args, nodes, ga, garb):
@@ -167,20 +167,20 @@ def analyze_nodes(args, nodes, ga, garb):
 
 
   # Print results.
-  print 'Object frequency.',
-  print 'Showing no more than', args.num_to_show, 'classes of objects, with at least', args.min_times, 'objects each.'
+  print('Object frequency.', end=' ')
+  print('Showing no more than', args.num_to_show, 'classes of objects, with at least', args.min_times, 'objects each.')
   print_inv_counts_map(count_map, counts, args.num_to_show)
-  print
+  print()
 
-  print 'JS function object frequency.',
-  print 'Showing no more than', args.num_to_show, 'JS function objects, with at least', args.min_times, 'objects each.'
+  print('JS function object frequency.', end=' ')
+  print('Showing no more than', args.num_to_show, 'JS function objects, with at least', args.min_times, 'objects each.')
   print_inv_counts_map(js_fn_map, js_fn_map_dom, args.num_to_show)
-  print
+  print()
 
   [js_fn_map, js_fn_map_dom] = invert_counts_map(js_fn_counts, args.min_times)
 
-  print 'Objects with highest ref counts.',
-  print 'Showing no more than', args.num_rc_to_show, 'objects, with ref count of at least', args.min_rc
+  print('Objects with highest ref counts.', end=' ')
+  print('Showing no more than', args.num_rc_to_show, 'objects, with ref count of at least', args.min_rc)
 
   num_printed = 0
   for n in ref_counts:
@@ -190,12 +190,12 @@ def analyze_nodes(args, nodes, ga, garb):
       if num_printed == args.num_rc_to_show:
         break
       num_printed += 1
-      print '  rc=%(num)d %(addr)s %(label)s' % {'num':n, 'addr':x, 'label':ga.nodeLabels[x]}
-  print
+      print('  rc=%(num)d %(addr)s %(label)s' % {'num':n, 'addr':x, 'label':ga.nodeLabels[x]})
+  print()
 
   if content_parent_count > content_parent_alert_threshold:
-    print 'ContentParent count seems high. There are', content_parent_count, 'of them.'
-    print
+    print('ContentParent count seems high. There are', content_parent_count, 'of them.')
+    print()
 
 
 #######
