@@ -3,7 +3,7 @@ collector graph logs.  This requires Firefox 9 or later, because
 Firefox 9 introduced a new cycle collector log format.
 
 See this page for how to generate these logs:
-  https://wiki.mozilla.org/Performance:Leak_Tools#Cycle_collector_heap_dump
+  https://firefox-source-docs.mozilla.org/performance/memory/gc_and_cc_logs.html
 
 
 check_cycle_collector: Cycle collector implemented in Python.  It
