@@ -51,8 +51,11 @@ mark_remover: remove marked objects (and results) from a CC log.
 Large scale analysis tools
 --------------------------
 
-census: This gives a general overview of what kind of things are
-  in the graph.
+garbage_census: Give the classes of garbage objects.
+
+live_census: Give the classes of live objects in the graph, with some
+  combination of similar types (for instance, JS Objects that don't
+  have the same global are combined).
 
 parental: Get the classes that are holding onto elements of a
   particular class.
