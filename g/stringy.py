@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 import re
@@ -26,19 +26,19 @@ stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )<([^:]*): len
 def analyzeStrings(strings):
   metrics = {}
 
-  for (_, l, s), count in strings.iteritems():
+  for (_, l, s), count in strings.items():
     # i is the metric of interest
     i = count * l
     metrics.setdefault(i, []).append(s)
 
   # probably a better way to listify here...
   l = []
-  for c, s in metrics.iteritems():
+  for c, s in metrics.items():
     l.append((c, s))
   l = sorted(l, reverse=True)
 
 
-  print 'total chars :: num copies x strings'
+  print('total chars :: num copies x strings')
   howMany = 20
   for x in l:
     if howMany == 0:
@@ -46,20 +46,20 @@ def analyzeStrings(strings):
     howMany -= 1
     for s in x[1]:
       # Only print out the first 100 chars of the string.
-      print "{} :: {} x '{}'".format(x[0], x[0]/len(s), s[:100])
+      print("{} :: {} x '{}'".format(x[0], x[0]/len(s), s[:100]))
 
 
 #    if len(x[1]) <= 10:
-#      print x[1]
+#      print(x[1])
 #    else:
-#      print 'TOO MANY'
+#      print('TOO MANY')
 
 
 def dumpAtoms(strings):
-  for (t, l, s), count in strings.iteritems():
+  for (t, l, s), count in strings.items():
     if t != "atom":
       continue
-    print s
+    print(s)
 
 
 # This parses a file f and produces a dict mapping strings to the number of times
@@ -83,7 +83,7 @@ def parseGCLog (fname):
   try:
     f = open(fname, 'r')
   except:
-    print 'Error opening file', fname
+    print('Error opening file', fname)
     exit(-1)
 
   strings = parseGCLogInner(f)
@@ -92,7 +92,7 @@ def parseGCLog (fname):
   #dumpAtoms(strings)
 
 if len(sys.argv) < 2:
-  print 'Not enough arguments.'
+  print('Not enough arguments.')
   exit()
 
 parseGCLog(sys.argv[1])
