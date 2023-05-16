@@ -125,7 +125,7 @@ def parseCCEdgeFile (fname):
   try:
     f = open(fname, 'r')
   except:
-    sys.stderr.write('Error opening file' + fname + '\n')
+    sys.stderr.write('Error opening file ' + fname + '\n')
     exit(-1)
 
   pg = parseGraph(f)
