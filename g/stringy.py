@@ -24,35 +24,21 @@ stringPatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) string )<([^:]*): len
 
 
 def analyzeStrings(strings):
-  metrics = {}
+  metrics = []
 
   for (_, l, s), count in strings.items():
-    # i is the metric of interest
-    i = count * l
-    metrics.setdefault(i, []).append(s)
+    totalLength = count * l
+    metrics.append((totalLength, count, s))
 
-  # probably a better way to listify here...
-  l = []
-  for c, s in metrics.items():
-    l.append((c, s))
-  l = sorted(l, reverse=True)
+  metrics = sorted(metrics, reverse=True)
 
+  # Only print the first 20.
+  metrics = metrics[:20]
 
   print('total chars :: num copies x strings')
-  howMany = 20
-  for x in l:
-    if howMany == 0:
-      break
-    howMany -= 1
-    for s in x[1]:
-      # Only print out the first 100 chars of the string.
-      print("{} :: {} x '{}'".format(x[0], x[0]/len(s), s[:100]))
-
-
-#    if len(x[1]) <= 10:
-#      print(x[1])
-#    else:
-#      print('TOO MANY')
+  for (totalLength, count, s) in metrics:
+    # Only print out the first 100 chars of the string.
+    print("{} :: {} x '{}'".format(totalLength, count, s[:100]))
 
 
 def dumpAtoms(strings):
