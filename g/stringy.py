@@ -67,7 +67,7 @@ def parseGCLogInner(f):
 
 def parseGCLog (fname):
   try:
-    f = open(fname, 'r')
+    f = open(fname, 'r', encoding='latin1')
   except:
     print('Error opening file', fname)
     exit(-1)
