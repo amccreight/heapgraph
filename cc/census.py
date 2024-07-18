@@ -52,7 +52,7 @@ def print_node (ga, x):
   sys.stdout.write ('{0} [{1}]'.format(x, ga.nodeLabels.get(x, '')))
 
 
-obj_patt = re.compile ('(JS Object \([^\)]+\)) \(global=[0-9a-fA-F]*\)')
+obj_patt = re.compile(r'(JS Object \([^\)]+\)) \(global=[0-9a-fA-F]*\)')
 
 starts_with = set (['nsGenericElement (XUL)', \
                     'nsGenericElement (xhtml) span ', \

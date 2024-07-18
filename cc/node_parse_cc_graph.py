@@ -20,10 +20,10 @@ GraphAttribs = namedtuple('GraphAttribs', 'nodeLabels rcNodes gcNodes')
 ####  Log parsing
 ####
 
-nodePatt = re.compile ('([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
-edgePatt = re.compile ('> ([a-zA-Z0-9]+) (.*)$')
-weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
-incrRootPatt = re.compile('IncrementalRoot ([a-zA-Z0-9]+)\r?$')
+nodePatt = re.compile(r'([a-zA-Z0-9]+) \[(rc=[0-9]+|gc(?:.marked)?)\] (.*)$')
+edgePatt = re.compile(r'> ([a-zA-Z0-9]+) (.*)$')
+weakMapEntryPatt = re.compile(r'WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
+incrRootPatt = re.compile(r'IncrementalRoot ([a-zA-Z0-9]+)\r?$')
 
 
 # parse CC graph
@@ -90,8 +90,8 @@ def parseGraph (f):
   return (nodes, ga)
 
 
-resultPatt = re.compile ('([a-zA-Z0-9]+) \[([a-z0-9=]+)\]$')
-knownPatt = re.compile ('known=(\d+)')
+resultPatt = re.compile(r'([a-zA-Z0-9]+) \[([a-z0-9=]+)\]$')
+knownPatt = re.compile(r'known=(\d+)')
 
 
 def parseResults (f):
