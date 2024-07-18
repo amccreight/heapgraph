@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -13,9 +13,9 @@ from collections import namedtuple
 ####  Log parsing
 ####
 
-nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
-edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
-weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
+nodePatt = re.compile(r'((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
+edgePatt = re.compile(r'> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
+weakMapEntryPatt = re.compile(r'WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
 # A bit of a hack. I'm not sure how up to date this is.
 def switchToGreyRoots(l):
@@ -54,7 +54,7 @@ def parseRoots (f):
         # Skip over comments.
         continue
       else:
-        print "Error: unknown line ", l
+        print("Error: unknown line ", l)
         exit(-1)
 
   #for r, count in rootLabels.iteritems():
@@ -147,10 +147,10 @@ def parseGraph (f):
         # Skip over comments.
         continue
       else:
-        print 'Error: Unknown line:', l[:-1]
+        print('Error: Unknown line:', l[:-1])
 
   scriptyFunctions = {}
-  for (f, faddrs) in function.iteritems():
+  for (f, faddrs) in function.items():
     for fa in faddrs:
       scriptName = scriptURLs.get(functionScripts.get(fa, "NONE"), "???")
       key = f
@@ -166,7 +166,7 @@ def parseGraph (f):
     numItems = 0
     ellipsed = False
 
-    for stringType, c in sorted(m.items(), reverse=True, key=lambda (a,b): b):
+    for stringType, c in sorted(list(m.items()), reverse=True, key=lambda a_b: a_b[1]):
       if numItems < maxItems:
         s += "{} {}, ".format(c, stringType)
       elif not ellipsed:
@@ -198,8 +198,8 @@ def parseGraph (f):
   displayStuff.append((call, "calls: {}".format(call)))
   displayStuff.append((other, "other: {}".format(other)))
 
-  for _, s in sorted(displayStuff, reverse=True, key=lambda (a,b): a):
-    print s
+  for _, s in sorted(displayStuff, reverse=True, key=lambda a_b1: a_b1[0]):
+    print(s)
 
 
 
@@ -207,7 +207,7 @@ def parseGCEdgeFile (fname):
   try:
     f = open(fname, 'r')
   except:
-    print 'Error opening file', fname
+    print('Error opening file', fname)
     exit(-1)
 
   rootLabels = parseRoots(f)
@@ -217,7 +217,7 @@ def parseGCEdgeFile (fname):
 
 
 if len(sys.argv) < 2:
-  print 'Not enough arguments.'
+  print('Not enough arguments.')
   exit()
 
 parseGCEdgeFile(sys.argv[1])
