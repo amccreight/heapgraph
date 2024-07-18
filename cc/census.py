@@ -79,6 +79,8 @@ def canonize_label(l):
       return 'JS ObjectGroup'
     if l.startswith('JS Object (Function'):
       return 'JS Object (Function)'
+    if l.startswith('JS Object (Object)'):
+      return 'JS Object (Object)'
     else:
       return 'JS Object (other)'
   else:
