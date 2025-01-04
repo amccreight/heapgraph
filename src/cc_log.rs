@@ -291,10 +291,10 @@ impl CCLog {
             '#' => ParsedLine::Comment,
             'W' => {
                 if let Some(caps) = WEAK_MAP_RE.captures(&line) {
-                    let map = CCLog::atomize_weakmap_addr(caps.at(1).unwrap());
-                    let key = CCLog::atomize_weakmap_addr(caps.at(2).unwrap());
-                    let delegate = CCLog::atomize_weakmap_addr(caps.at(3).unwrap());
-                    let val = CCLog::atomize_weakmap_addr(caps.at(4).unwrap());
+                    let map = CCLog::atomize_weakmap_addr(caps.get(1).unwrap().as_str());
+                    let key = CCLog::atomize_weakmap_addr(caps.get(2).unwrap().as_str());
+                    let delegate = CCLog::atomize_weakmap_addr(caps.get(3).unwrap().as_str());
+                    let val = CCLog::atomize_weakmap_addr(caps.get(4).unwrap().as_str());
                     ParsedLine::WeakMap(map, key, delegate, val)
                 } else {
                     panic!("Invalid line starting with W: {}", line)
