@@ -21,9 +21,9 @@ if len(sys.argv) < 2:
 
 baseFileName = os.path.basename(sys.argv[1])
 
-if baseFileName.startswith('cc'):
+if baseFileName.startswith('cc') or baseFileName.startswith('incomplete-cc'):
     cc.find_roots.findCCRoots()
-elif baseFileName.startswith('gc'):
+elif baseFileName.startswith('gc') or baseFileName.startswith('incomplete-gc'):
     g.find_roots.findGCRoots()
 else:
     sys.stderr.write('Expected log file name to start with cc or gc.\n')
