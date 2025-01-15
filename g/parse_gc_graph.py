@@ -25,10 +25,12 @@ nodePatt = re.compile ('((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 edgePatt = re.compile ('> ((?:0x)?[a-fA-F0-9]+) (?:(B|G|W) )?([^\r\n]*)\r?$')
 weakMapEntryPatt = re.compile ('WeakMapEntry map=([a-zA-Z0-9]+|\(nil\)) key=([a-zA-Z0-9]+|\(nil\)) keyDelegate=([a-zA-Z0-9]+|\(nil\)) value=([a-zA-Z0-9]+)\r?$')
 
-# A bit of a hack. I'm not sure how up to date this is.
-def switchToGreyRoots(l):
-  return l == "DOM expando object" or l.startswith("XPCWrappedNative") or \
-      l.startswith("XPCVariant") or l.startswith("nsXPCWrappedJS")
+# A bit of a hack. Up-to-date as of Jan 15, 2025.
+def switchToGrayRoots(l):
+  return l.startswith("XPCNativeInterface") or l == "mAnonymousGlobalScopes[i]" or \
+    l == "active window global" or l == "mCallback" or \
+    l == "DOM expando object" or l.startswith("XPCWrappedNative") or \
+    l.startswith("XPCVariant") or l.startswith("nsXPCWrappedJS")
 
 def parseRoots (f):
   roots = {}
@@ -43,7 +45,7 @@ def parseRoots (f):
       color = nm.group(2)
       lbl = nm.group(3)
 
-      if blackRoot and switchToGreyRoots(lbl):
+      if blackRoot and switchToGrayRoots(lbl):
         blackRoot = False
 
       # Don't overwrite an existing root, to avoid replacing a black root with a gray root.
